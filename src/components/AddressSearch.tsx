@@ -85,7 +85,7 @@ export default function AddressSearch({ value, onChange }: AddressSearchProps) {
   }
 
   return (
-    <div ref={containerRef} className="relative w-full">
+    <div ref={containerRef} className="relative w-full z-[9999]">
       <div className="relative">
         {/* Location pin icon */}
         <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-primary text-lg">location_on</span>
@@ -109,7 +109,7 @@ export default function AddressSearch({ value, onChange }: AddressSearchProps) {
 
       {/* Dropdown */}
       {isOpen && results.length > 0 && (
-        <ul className="absolute z-50 mt-2 w-full overflow-hidden rounded-2xl border border-[#4a7c59]/30 bg-[#111a11] shadow-2xl shadow-black/40">
+        <ul className="absolute z-[9999] mt-2 w-full overflow-hidden rounded-2xl border border-[#4a7c59]/30 bg-[#111a11] shadow-2xl shadow-black/40">
           {results.map((result) => (
             <li key={result.place_id}>
               <button
