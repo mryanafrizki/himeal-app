@@ -1,44 +1,38 @@
-FROM node:20-alpine AS base
-RUN apk add --no-cache python3 make g++
+FROM node:20-bookworm-slim
 
-# Install dependencies
-FROM base AS deps
+RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
+
 COPY package.json package-lock.json ./
 RUN npm ci
 
-# Build the application
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
-# Production runner
-FROM node:20-alpine AS runner
-WORKDIR /app
-
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
-
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-# Create data directory for SQLite
 RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
+
+# Copy standalone output
+RUN cp -r .next/standalone/. ./standalone/ && \
+    cp -r .next/static ./standalone/.next/static && \
+    cp -r public ./standalone/public && \
+    mkdir -p ./standalone/data && \
+    chown -R nextjs:nodejs ./standalone
 
 USER nextjs
 
+WORKDIR /app/standalone
+
 EXPOSE 3000
 
+ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
-ENV DB_DIR=/app/data
+ENV DB_DIR=/app/standalone/data
 
 CMD ["node", "server.js"]
