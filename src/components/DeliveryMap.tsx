@@ -1,18 +1,6 @@
 "use client";
 
-import dynamic from "next/dynamic";
-
-const MapInner = dynamic(() => import("./MapInner"), {
-  ssr: false,
-  loading: () => (
-    <div className="flex h-44 items-center justify-center rounded-3xl bg-surface-container">
-      <div className="flex flex-col items-center gap-3">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-outline-variant border-t-primary" />
-        <span className="text-xs text-on-surface-variant">Memuat peta...</span>
-      </div>
-    </div>
-  ),
-});
+import { useState } from "react";
 
 interface DeliveryMapProps {
   onLocationSelect: (lat: number, lng: number) => void;
@@ -25,21 +13,93 @@ export default function DeliveryMap({
   selectedLat,
   selectedLng,
 }: DeliveryMapProps) {
-  return (
-    <div className="relative h-44">
-      <MapInner
-        onLocationSelect={onLocationSelect}
-        selectedLat={selectedLat}
-        selectedLng={selectedLng}
-      />
-      <div className="absolute inset-0 bg-primary/5 pointer-events-none rounded-3xl" />
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-      {/* Map overlay hint */}
-      {selectedLat === undefined && (
-        <div className="pointer-events-none absolute bottom-3 left-1/2 z-[1000] -translate-x-1/2">
-          <div className="rounded-full bg-[#111a11]/90 border border-[#4a7c59]/30 px-4 py-2 text-xs text-on-surface-variant backdrop-blur-xl">
-            Ketuk peta untuk pilih lokasi pengiriman
-          </div>
+  const handleShareLocation = () => {
+    if (!navigator.geolocation) {
+      setError("Browser tidak mendukung geolokasi");
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        onLocationSelect(latitude, longitude);
+        setIsLoading(false);
+      },
+      (err) => {
+        setIsLoading(false);
+        switch (err.code) {
+          case err.PERMISSION_DENIED:
+            setError("Izin lokasi ditolak. Aktifkan di pengaturan browser.");
+            break;
+          case err.POSITION_UNAVAILABLE:
+            setError("Lokasi tidak tersedia.");
+            break;
+          case err.TIMEOUT:
+            setError("Waktu habis. Coba lagi.");
+            break;
+          default:
+            setError("Gagal mendapatkan lokasi.");
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 60000,
+      }
+    );
+  };
+
+  const hasLocation = selectedLat !== undefined && selectedLng !== undefined;
+
+  return (
+    <div className="space-y-3">
+      {/* Share Location Button */}
+      <button
+        type="button"
+        onClick={handleShareLocation}
+        disabled={isLoading}
+        className="w-full flex items-center justify-center gap-3 py-4 bg-surface-container rounded-2xl text-sm font-medium text-on-surface hover:bg-surface-container-high transition-colors active:scale-[0.98] disabled:opacity-50"
+      >
+        {isLoading ? (
+          <>
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-outline-variant border-t-primary" />
+            <span>Mendapatkan lokasi...</span>
+          </>
+        ) : (
+          <>
+            <span
+              className="material-symbols-outlined text-primary"
+              style={{ fontVariationSettings: "'FILL' 1" }}
+            >
+              my_location
+            </span>
+            <span>{hasLocation ? "Perbarui Lokasi" : "Bagikan Lokasi Saya"}</span>
+          </>
+        )}
+      </button>
+
+      {error && (
+        <p className="text-xs text-error text-center">{error}</p>
+      )}
+
+      {/* Google Maps Embed */}
+      {hasLocation && (
+        <div className="rounded-2xl overflow-hidden border border-outline-variant/20 h-44">
+          <iframe
+            title="Lokasi pengantaran"
+            width="100%"
+            height="100%"
+            style={{ border: 0 }}
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            src={`https://maps.google.com/maps?q=${selectedLat},${selectedLng}&z=16&output=embed`}
+          />
         </div>
       )}
     </div>

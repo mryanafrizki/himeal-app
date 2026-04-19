@@ -10,15 +10,8 @@ import {
 } from "@/lib/delivery";
 import MenuCard from "@/components/MenuCard";
 import AddressSearch from "@/components/AddressSearch";
-import dynamic from "next/dynamic";
 import CartSummary from "@/components/CartSummary";
-
-const DeliveryMap = dynamic(() => import("@/components/DeliveryMap"), {
-  ssr: false,
-  loading: () => (
-    <div className="h-44 rounded-3xl bg-surface-container animate-pulse" />
-  ),
-});
+import DeliveryMap from "@/components/DeliveryMap";
 
 interface CartItem {
   productId: string;
@@ -100,19 +93,6 @@ export default function HomePage() {
     setSelectedLat(lat);
     setSelectedLng(lng);
     await recalcDistance(lat, lng);
-
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
-        { headers: { "User-Agent": "HiMeal-App" } }
-      );
-      const data = await res.json();
-      if (data.display_name) {
-        setAddress(data.display_name);
-      }
-    } catch {
-      // silent
-    }
   }, [recalcDistance]);
 
   const cartItems = Object.values(cart);
@@ -311,16 +291,14 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Map (Optional) */}
+          {/* Share Location (Optional) */}
           <div className="space-y-2">
-            <label className="font-label text-xs uppercase tracking-widest text-on-surface-variant font-medium">Titik Peta (Opsional)</label>
-            <div className="h-44 rounded-3xl overflow-hidden relative border border-outline-variant/20">
-              <DeliveryMap
-                onLocationSelect={handleMapSelect}
-                selectedLat={selectedLat}
-                selectedLng={selectedLng}
-              />
-            </div>
+            <label className="font-label text-xs uppercase tracking-widest text-on-surface-variant font-medium">Titik Lokasi (Opsional)</label>
+            <DeliveryMap
+              onLocationSelect={handleMapSelect}
+              selectedLat={selectedLat}
+              selectedLng={selectedLng}
+            />
           </div>
 
           {/* Distance & Fee Info */}
