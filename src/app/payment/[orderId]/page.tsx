@@ -51,7 +51,6 @@ export default function PaymentPage() {
         sessionStorage.getItem("himeal_created_orders") || "[]"
       );
       if (!createdOrders.includes(orderId)) {
-        // Only first load from checkout flow sets ownership
         const fromCheckout = document.referrer.includes("/checkout");
         if (fromCheckout) {
           createdOrders.push(orderId);
@@ -125,16 +124,6 @@ export default function PaymentPage() {
     }
   };
 
-  const paymentUrl =
-    typeof window !== "undefined"
-      ? `${window.location.origin}/payment/${orderId}`
-      : "";
-
-  const copyLink = () => {
-    navigator.clipboard.writeText(paymentUrl);
-    toast.success("Link disalin");
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -147,7 +136,7 @@ export default function PaymentPage() {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="text-center space-y-4">
-          <p className="text-muted-foreground">
+          <p className="text-on-surface-variant">
             Data pembayaran tidak tersedia
           </p>
           <button
@@ -162,116 +151,80 @@ export default function PaymentPage() {
   }
 
   return (
-    <main className="min-h-screen pb-8">
-      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-2xl border-b border-[#4a7c59]/10">
-        <div className="max-w-lg mx-auto px-5 py-4">
-          <h1 className="text-xl font-extrabold font-['Manrope'] tracking-tight text-center">
-            Pembayaran
-          </h1>
+    <div className="font-body text-on-surface antialiased min-h-screen flex flex-col">
+      {/* TopAppBar */}
+      <nav className="bg-[#10150f]/80 backdrop-blur-xl top-0 z-50 flex items-center justify-between px-6 py-4 w-full">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => router.back()}
+            className="active:scale-95 duration-200 hover:opacity-80 transition-opacity text-[#9dd3aa]"
+          >
+            <span className="material-symbols-outlined">arrow_back</span>
+          </button>
+          <h1 className="font-['Manrope'] font-bold tracking-tight text-lg text-[#9dd3aa]">Pembayaran</h1>
         </div>
-      </header>
+      </nav>
 
-      <div className="max-w-lg mx-auto px-5 pt-6 space-y-5">
-        {/* QR Code */}
+      <main className="flex-grow flex flex-col items-center justify-start px-6 pt-8 pb-32 max-w-md mx-auto w-full">
         {!expired ? (
-          <div className="bg-[#1c211b] rounded-2xl p-8 flex flex-col items-center space-y-5">
+          <div className="w-full flex flex-col items-center gap-8">
+            {/* Amount Display */}
+            <div className="text-center">
+              <p className="font-label text-[10px] uppercase tracking-[0.1em] text-on-surface-variant mb-1">Total Pembayaran</p>
+              <h2 className="font-headline font-extrabold text-4xl tracking-tighter text-on-surface">{formatCurrency(order.total)}</h2>
+            </div>
+
+            {/* QR Code + Link */}
             <PaymentQR
               qrString={order.qr_string}
               orderId={orderId}
               expiresAt={order.expires_at || ""}
             />
 
-            {/* Countdown */}
-            <div className="text-center">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-[#c1c9bf] mb-2">
-                Waktu tersisa
-              </p>
-              <CountdownTimer
-                expiresAt={order.expires_at || ""}
-                onExpire={handleExpire}
-              />
-            </div>
+            {/* Timer */}
+            <CountdownTimer
+              expiresAt={order.expires_at || ""}
+              onExpire={handleExpire}
+            />
 
-            {/* Total */}
-            <div className="text-center">
-              <p className="text-3xl font-black font-['Manrope'] text-[#9dd3aa]">
-                {formatCurrency(order.total)}
+            {/* Instructions */}
+            <div className="bg-surface-container rounded-2xl p-5 w-full text-center border border-outline-variant/10">
+              <p className="text-on-surface-variant text-sm leading-relaxed">
+                Scan QR code menggunakan aplikasi <span className="text-secondary font-semibold">e-wallet</span> atau <span className="text-secondary font-semibold">mobile banking</span> pilihan Anda.
               </p>
             </div>
           </div>
         ) : (
-          <div className="bg-[#1c211b] rounded-2xl p-8 text-center space-y-4">
-            <div className="w-16 h-16 mx-auto rounded-full bg-destructive/10 flex items-center justify-center">
-              <svg
-                width="32"
-                height="32"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                className="text-destructive"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <path d="M15 9l-6 6M9 9l6 6" />
-              </svg>
+          <div className="w-full flex flex-col items-center gap-6 pt-8">
+            <div className="w-16 h-16 rounded-full bg-error/10 flex items-center justify-center">
+              <span className="material-symbols-outlined text-error text-3xl">cancel</span>
             </div>
-            <p className="text-foreground font-bold font-['Manrope']">
-              Pembayaran Kedaluwarsa
-            </p>
-            <p className="text-sm text-[#c1c9bf]">
-              Silakan buat pesanan baru
-            </p>
+            <div className="text-center">
+              <p className="font-headline font-bold text-on-surface text-lg">Pembayaran Kedaluwarsa</p>
+              <p className="text-sm text-on-surface-variant mt-2">Silakan buat pesanan baru</p>
+            </div>
             <button
               onClick={() => router.replace("/")}
-              className="mt-4 px-8 py-4 rounded-full bg-[#4a7c59] text-white font-extrabold text-xs uppercase tracking-widest"
+              className="mt-4 bg-[#4a7c59] text-on-primary-container px-8 py-4 rounded-full font-headline font-extrabold uppercase tracking-widest text-sm"
             >
               Pesan Lagi
             </button>
           </div>
         )}
+      </main>
 
-        {/* Payment Link */}
-        {!expired && (
-          <div className="bg-[#1c211b] rounded-2xl p-5 space-y-3">
-            <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#c1c9bf]">
-              Link Pembayaran
-            </p>
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                readOnly
-                value={paymentUrl}
-                className="flex-1 text-xs bg-[#181d17] rounded-xl border-none p-3"
-              />
-              <button
-                onClick={copyLink}
-                className="shrink-0 px-5 py-3 rounded-xl bg-[#4a7c59] text-white text-xs font-bold"
-              >
-                Salin
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Instructions */}
-        {!expired && (
-          <p className="text-center text-sm text-[#c1c9bf] px-4">
-            Scan QR code menggunakan aplikasi e-wallet atau mobile banking
-          </p>
-        )}
-
-        {/* Cancel Button - only for owner device */}
-        {!expired && isOwner && (
-          <div className="text-center pt-4">
-            <button
-              onClick={handleCancel}
-              className="text-sm text-[#c1c9bf] hover:text-destructive transition-colors"
-            >
-              Batalkan Pesanan
-            </button>
-          </div>
-        )}
-      </div>
-    </main>
+      {/* Footer Actions */}
+      {!expired && isOwner && (
+        <div className="fixed bottom-0 left-0 right-0 p-8 flex flex-col items-center max-w-md mx-auto">
+          <button
+            onClick={handleCancel}
+            className="font-label text-sm text-outline hover:text-error transition-colors uppercase tracking-widest font-semibold active:scale-95 duration-200 py-4"
+          >
+            Batalkan Pesanan
+          </button>
+          <div className="h-4" />
+        </div>
+      )}
+    </div>
   );
 }

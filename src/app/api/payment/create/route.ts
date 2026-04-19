@@ -76,9 +76,10 @@ export async function POST(request: NextRequest) {
       orderId: body.orderId,
     });
   } catch (error) {
-    console.error("[POST /api/payment/create]", error);
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error("[POST /api/payment/create]", errMsg, error);
     return NextResponse.json(
-      { error: "Failed to create payment" },
+      { error: `Failed to create payment: ${errMsg}` },
       { status: 500 }
     );
   }

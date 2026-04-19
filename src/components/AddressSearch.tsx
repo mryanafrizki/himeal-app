@@ -88,20 +88,7 @@ export default function AddressSearch({ value, onChange }: AddressSearchProps) {
     <div ref={containerRef} className="relative w-full">
       <div className="relative">
         {/* Location pin icon */}
-        <div className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#9dd3aa]">
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 14 14"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M7 1.5C4.79 1.5 3 3.29 3 5.5C3 8.5 7 12.5 7 12.5C7 12.5 11 8.5 11 5.5C11 3.29 9.21 1.5 7 1.5ZM7 7C6.17 7 5.5 6.33 5.5 5.5C5.5 4.67 6.17 4 7 4C7.83 4 8.5 4.67 8.5 5.5C8.5 6.33 7.83 7 7 7Z"
-              fill="currentColor"
-            />
-          </svg>
-        </div>
+        <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-primary text-lg">location_on</span>
 
         <input
           type="text"
@@ -109,13 +96,13 @@ export default function AddressSearch({ value, onChange }: AddressSearchProps) {
           onChange={(e) => handleInputChange(e.target.value)}
           onFocus={() => results.length > 0 && setIsOpen(true)}
           placeholder="Cari alamat pengiriman..."
-          className="w-full pl-12 pr-4 py-4 bg-[#1c211b] border-none rounded-2xl text-sm font-medium"
+          className="w-full pl-12 pr-4 py-4 bg-surface-container border-none rounded-2xl text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary shadow-inner"
         />
 
         {/* Loading spinner */}
         {isLoading && (
           <div className="absolute right-4 top-1/2 -translate-y-1/2">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#414942] border-t-[#9dd3aa]" />
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-outline-variant border-t-primary" />
           </div>
         )}
       </div>
@@ -128,22 +115,10 @@ export default function AddressSearch({ value, onChange }: AddressSearchProps) {
               <button
                 type="button"
                 onClick={() => handleSelect(result)}
-                className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-[#1c211b]"
+                className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-container"
               >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 14 14"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="mt-0.5 shrink-0 text-[#9dd3aa]"
-                >
-                  <path
-                    d="M7 1.5C4.79 1.5 3 3.29 3 5.5C3 8.5 7 12.5 7 12.5C7 12.5 11 8.5 11 5.5C11 3.29 9.21 1.5 7 1.5ZM7 7C6.17 7 5.5 6.33 5.5 5.5C5.5 4.67 6.17 4 7 4C7.83 4 8.5 4.67 8.5 5.5C8.5 6.33 7.83 7 7 7Z"
-                    fill="currentColor"
-                  />
-                </svg>
-                <span className="text-sm leading-relaxed text-[#c1c9bf] line-clamp-2">
+                <span className="material-symbols-outlined text-primary text-lg mt-0.5 shrink-0">location_on</span>
+                <span className="text-sm leading-relaxed text-on-surface-variant line-clamp-2">
                   {result.display_name}
                 </span>
               </button>

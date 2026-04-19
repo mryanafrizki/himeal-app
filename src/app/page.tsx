@@ -16,7 +16,7 @@ import CartSummary from "@/components/CartSummary";
 const DeliveryMap = dynamic(() => import("@/components/DeliveryMap"), {
   ssr: false,
   loading: () => (
-    <div className="h-[300px] rounded-xl bg-surface-container animate-pulse" />
+    <div className="h-44 rounded-3xl bg-surface-container animate-pulse" />
   ),
 });
 
@@ -91,7 +91,6 @@ export default function HomePage() {
     setDistanceKm(Math.round(dist * 100) / 100);
     setDeliveryFee(fee);
 
-    // Reverse geocode to get address from map click
     try {
       const res = await fetch(
         `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
@@ -113,6 +112,8 @@ export default function HomePage() {
     (sum, item) => sum + item.price * item.quantity,
     0
   );
+
+  const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleCheckout = async () => {
     if (cartItems.length === 0) {
@@ -147,7 +148,6 @@ export default function HomePage() {
         return;
       }
 
-      // Store checkout data for the checkout page
       sessionStorage.setItem(
         "himeal_checkout",
         JSON.stringify({
@@ -161,7 +161,6 @@ export default function HomePage() {
         })
       );
 
-      // Track order ownership
       const createdOrders = JSON.parse(
         sessionStorage.getItem("himeal_created_orders") || "[]"
       );
@@ -179,41 +178,48 @@ export default function HomePage() {
     }
   };
 
+  const dayName = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(new Date());
+
   return (
-    <main className="min-h-screen pb-32">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-2xl border-b border-[#4a7c59]/10">
-        <div className="max-w-lg mx-auto px-5 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-black text-[#9dd3aa] tracking-[-0.04em] uppercase font-['Manrope']">
-                HI MEAL!
-              </h1>
-              <p className="text-[10px] tracking-[0.2em] uppercase text-[#c1c9bf]">
-                Good food, good mood
-              </p>
-            </div>
+    <>
+      {/* Top Navigation Shell */}
+      <header className="sticky top-0 z-50 bg-[#10150f]/80 backdrop-blur-xl border-none">
+        <div className="flex justify-between items-center w-full px-8 py-6 max-w-screen-2xl mx-auto">
+          <div className="flex flex-col">
+            <span className="text-3xl font-black text-[#9dd3aa] tracking-[-0.04em] font-['Manrope'] uppercase">HI MEAL!</span>
+            <span className="font-['Inter'] text-[10px] tracking-[0.2em] uppercase text-on-surface-variant font-medium">Good food, good mood</span>
+          </div>
+          <div className="flex gap-4">
+            <button className="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center text-primary transition-transform active:scale-95 duration-200">
+              <span className="material-symbols-outlined">eco</span>
+            </button>
           </div>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <div className="relative h-48 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#4a7c59]/20 via-[#10150f]/60 to-[#10150f]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(74,124,89,0.15)_0%,_transparent_70%)]" />
-        <div className="absolute bottom-6 left-0 right-0 text-center">
-          <p className="text-sm font-medium text-[#c1c9bf]">Healthy food delivery</p>
-          <p className="text-xs text-[#c1c9bf]/60 mt-1">Purwokerto</p>
-        </div>
-      </div>
+      <main className="px-6 space-y-10 pb-32">
+        {/* Hero Section */}
+        <section className="mt-4">
+          <div className="relative h-48 w-full rounded-3xl overflow-hidden bg-surface-container">
+            <div className="w-full h-full bg-gradient-to-br from-primary-container/30 via-surface-container to-background" />
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
+            <div className="absolute bottom-6 left-6">
+              <span className="text-xs font-label uppercase tracking-widest text-primary font-bold">Elite Performance Fuel</span>
+              <h2 className="text-3xl font-headline font-extrabold tracking-tight text-on-surface">Curated Nutrition.</h2>
+            </div>
+          </div>
+        </section>
 
-      <div className="max-w-lg mx-auto px-5 pt-6 space-y-8">
         {/* Menu Section */}
-        <section>
-          <h2 className="text-2xl font-extrabold font-['Manrope'] tracking-tight text-foreground mb-5">
-            Menu
-          </h2>
-          <div className="space-y-4">
+        <section className="space-y-6">
+          <div className="flex justify-between items-end">
+            <div className="space-y-1">
+              <h3 className="text-2xl font-headline font-extrabold text-on-surface tracking-tight">Today&apos;s Menu</h3>
+              <p className="text-sm text-on-surface-variant font-body">Chef-designed for maximum macro-efficiency.</p>
+            </div>
+            <span className="text-xs font-label uppercase tracking-widest text-on-secondary-container bg-secondary-container px-3 py-1 rounded-full">{dayName}</span>
+          </div>
+          <div className="grid gap-6">
             {MENU_ITEMS.map((item) => (
               <MenuCard
                 key={item.id}
@@ -228,45 +234,54 @@ export default function HomePage() {
         </section>
 
         {/* Delivery Section */}
-        <section>
-          <h2 className="text-2xl font-extrabold font-['Manrope'] tracking-tight text-foreground mb-5">
-            Pengantaran
-          </h2>
+        <section className="space-y-4">
+          <h3 className="text-lg font-headline font-bold text-on-surface tracking-tight">Delivery Address</h3>
 
-          <div className="space-y-4">
-            <AddressSearch value={address} onChange={handleAddressSelect} />
+          <AddressSearch value={address} onChange={handleAddressSelect} />
 
-            <div className="rounded-2xl overflow-hidden">
-              <DeliveryMap
-                onLocationSelect={handleMapSelect}
-                selectedLat={selectedLat}
-                selectedLng={selectedLng}
-              />
-            </div>
-
-            {distanceKm !== null && (
-              <div className="flex items-center justify-between bg-[#111a11] border border-[#4a7c59]/30 rounded-2xl p-5">
-                <div>
-                  <p className="text-xs text-[#c1c9bf]">Jarak</p>
-                  <p className="text-foreground font-bold font-['Manrope'] text-lg">
-                    {distanceKm} km
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-[#c1c9bf]">Ongkir</p>
-                  <p
-                    className={`font-bold font-['Manrope'] text-lg ${deliveryFee === 0 ? "text-[#9dd3aa]" : "text-foreground"}`}
-                  >
-                    {deliveryFee === 0 ? "GRATIS" : formatCurrency(deliveryFee)}
-                  </p>
-                </div>
-              </div>
-            )}
+          <div className="h-44 rounded-3xl overflow-hidden relative border border-outline-variant/20">
+            <DeliveryMap
+              onLocationSelect={handleMapSelect}
+              selectedLat={selectedLat}
+              selectedLng={selectedLng}
+            />
           </div>
-        </section>
-      </div>
 
-      {/* Cart Summary */}
+          {distanceKm !== null && (
+            <div className="botanical-card rounded-xl p-5 flex items-center justify-between">
+              <div>
+                <p className="text-xs text-on-surface-variant">Jarak</p>
+                <p className="font-headline font-bold text-lg text-on-surface">
+                  {distanceKm} km
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-on-surface-variant">Ongkir</p>
+                <p
+                  className={`font-headline font-bold text-lg ${deliveryFee === 0 ? "text-primary-container uppercase" : "text-on-surface"}`}
+                >
+                  {deliveryFee === 0 ? "GRATIS" : formatCurrency(deliveryFee)}
+                </p>
+              </div>
+            </div>
+          )}
+        </section>
+      </main>
+
+      {/* Footer Shell */}
+      <footer className="bg-[#181d17] rounded-t-[2rem] mt-20">
+        <div className="flex flex-col md:flex-row justify-between items-center px-12 py-16 w-full gap-8">
+          <div className="text-lg font-bold text-[#9dd3aa] font-headline uppercase tracking-widest">HI MEAL!</div>
+          <div className="flex gap-6">
+            <span className="font-['Inter'] text-sm tracking-wide uppercase text-[#414942] hover:text-[#9dd3aa] transition-opacity cursor-pointer">Sourcing</span>
+            <span className="font-['Inter'] text-sm tracking-wide uppercase text-[#414942] hover:text-[#9dd3aa] transition-opacity cursor-pointer">The Vault</span>
+            <span className="font-['Inter'] text-sm tracking-wide uppercase text-[#414942] hover:text-[#9dd3aa] transition-opacity cursor-pointer">Nutrition</span>
+          </div>
+          <p className="font-['Inter'] text-xs tracking-wide uppercase text-[#414942]">&copy; 2024 HiMeal. Good food, good mood.</p>
+        </div>
+      </footer>
+
+      {/* Floating Cart Bar */}
       {cartItems.length > 0 && (
         <CartSummary
           items={cartItems.map((item) => ({
@@ -281,6 +296,6 @@ export default function HomePage() {
           isLoading={isSubmitting}
         />
       )}
-    </main>
+    </>
   );
 }

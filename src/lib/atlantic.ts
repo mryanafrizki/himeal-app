@@ -1,5 +1,6 @@
-const ATLANTIC_BASE_URL =
-  process.env.ATLANTIC_BASE_URL || "https://atlantich2h.com/";
+const ATLANTIC_BASE_URL = (
+  process.env.ATLANTIC_BASE_URL || "https://atlantich2h.com"
+).replace(/\/+$/, "");
 const ATLANTIC_API_KEY = process.env.ATLANTIC_API_KEY || "";
 
 export interface CreateDepositResponse {

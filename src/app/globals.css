@@ -1,81 +1,116 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=Inter:wght@300;400;500;600&display=swap');
 @import "tailwindcss";
 
-:root {
-  --background: #10150f;
-  --foreground: #dfe4db;
-  --card: #1c211b;
-  --card-foreground: #dfe4db;
-  --card-elevated: #262b25;
-  --primary: #9dd3aa;
-  --primary-container: #4a7c59;
-  --primary-foreground: #01391c;
-  --secondary: #bccbb9;
-  --secondary-container: #3f4c3f;
-  --secondary-foreground: #273427;
-  --muted: #181d17;
-  --muted-foreground: #8b938a;
-  --border: #414942;
-  --surface: #10150f;
-  --surface-container: #1c211b;
-  --surface-container-high: #262b25;
-  --surface-container-highest: #313630;
-  --surface-container-low: #181d17;
-  --surface-bright: #353b34;
-  --destructive: #ffb4ab;
-  --success: #9dd3aa;
-  --warning: #ffb2bc;
-  --outline: #8b938a;
-  --outline-variant: #414942;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-card-elevated: var(--card-elevated);
-  --color-primary: var(--primary);
-  --color-primary-container: var(--primary-container);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-container: var(--secondary-container);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-border: var(--border);
-  --color-surface: var(--surface);
-  --color-surface-container: var(--surface-container);
-  --color-surface-high: var(--surface-container-high);
-  --color-surface-highest: var(--surface-container-highest);
-  --color-surface-low: var(--surface-container-low);
-  --color-surface-bright: var(--surface-bright);
-  --color-destructive: var(--destructive);
-  --color-success: var(--success);
-  --color-warning: var(--warning);
-  --color-outline: var(--outline);
-  --color-outline-variant: var(--outline-variant);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Primary */
+  --color-primary: #9dd3aa;
+  --color-primary-container: #4a7c59;
+  --color-primary-fixed: #b9efc5;
+  --color-primary-fixed-dim: #9dd3aa;
+  --color-on-primary: #01391c;
+  --color-on-primary-container: #e1ffe5;
+  --color-on-primary-fixed: #00210e;
+  --color-on-primary-fixed-variant: #1e5031;
+  --color-inverse-primary: #376847;
+
+  /* Secondary */
+  --color-secondary: #bccbb9;
+  --color-secondary-container: #3f4c3f;
+  --color-secondary-fixed: #d8e7d4;
+  --color-secondary-fixed-dim: #bccbb9;
+  --color-on-secondary: #273427;
+  --color-on-secondary-container: #aebdab;
+  --color-on-secondary-fixed: #121e13;
+  --color-on-secondary-fixed-variant: #3d4a3c;
+
+  /* Tertiary */
+  --color-tertiary: #ffb2bc;
+  --color-tertiary-container: #9f5f69;
+  --color-tertiary-fixed: #ffd9dd;
+  --color-tertiary-fixed-dim: #ffb2bc;
+  --color-on-tertiary: #52202a;
+  --color-on-tertiary-container: #fff5f5;
+  --color-on-tertiary-fixed: #380b16;
+  --color-on-tertiary-fixed-variant: #6d363f;
+
+  /* Error */
+  --color-error: #ffb4ab;
+  --color-error-container: #93000a;
+  --color-on-error: #690005;
+  --color-on-error-container: #ffdad6;
+
+  /* Surface */
+  --color-surface: #10150f;
+  --color-surface-dim: #10150f;
+  --color-surface-bright: #353b34;
+  --color-surface-container-lowest: #0a0f0a;
+  --color-surface-container-low: #181d17;
+  --color-surface-container: #1c211b;
+  --color-surface-container-high: #262b25;
+  --color-surface-container-highest: #313630;
+  --color-surface-variant: #313630;
+  --color-surface-tint: #9dd3aa;
+
+  /* Background */
+  --color-background: #10150f;
+  --color-on-background: #dfe4db;
+
+  /* On-surface */
+  --color-on-surface: #dfe4db;
+  --color-on-surface-variant: #c1c9bf;
+
+  /* Inverse */
+  --color-inverse-surface: #dfe4db;
+  --color-inverse-on-surface: #2c322c;
+
+  /* Outline */
+  --color-outline: #8b938a;
+  --color-outline-variant: #414942;
+
+  /* Font families */
+  --font-headline: 'Manrope', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-label: 'Inter', sans-serif;
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--outline-variant) transparent;
+  scrollbar-color: #414942 transparent;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  background-color: #10150f;
+  color: #dfe4db;
+  font-family: 'Inter', sans-serif;
+}
+
+.font-headline {
+  font-family: 'Manrope', sans-serif;
+}
+
+.font-body {
+  font-family: 'Inter', sans-serif;
+}
+
+.font-label {
+  font-family: 'Inter', sans-serif;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.botanical-card {
+  background-color: #111a11;
+  border: 1px solid rgba(74, 124, 89, 0.2);
 }
 
 input,
 textarea,
 select {
-  background: var(--surface-container-low);
+  background: #1c211b;
   border: none;
-  color: var(--foreground);
+  color: #dfe4db;
   border-radius: 1rem;
   padding: 0.875rem 1rem;
   font-size: 0.875rem;
@@ -87,31 +122,35 @@ select {
 input:focus,
 textarea:focus,
 select:focus {
-  box-shadow: 0 0 0 2px var(--primary-container);
+  box-shadow: 0 0 0 2px #4a7c59;
 }
 
 input::placeholder,
 textarea::placeholder {
-  color: var(--muted-foreground);
+  color: #8b938a;
 }
 
 .leaflet-container {
-  background: var(--card) !important;
+  background: #1c211b !important;
   border-radius: 0.75rem;
 }
 
 .leaflet-control-zoom a {
-  background: var(--surface-container-high) !important;
-  color: var(--foreground) !important;
-  border-color: var(--outline-variant) !important;
+  background: #262b25 !important;
+  color: #dfe4db !important;
+  border-color: #414942 !important;
 }
 
 .leaflet-control-attribution {
   background: rgba(28, 33, 27, 0.8) !important;
-  color: var(--muted-foreground) !important;
+  color: #8b938a !important;
   font-size: 0.625rem !important;
 }
 
 .leaflet-control-attribution a {
-  color: var(--primary) !important;
+  color: #9dd3aa !important;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
 }

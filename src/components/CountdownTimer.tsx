@@ -48,38 +48,24 @@ export default function CountdownTimer({
   const isExpired = secondsLeft <= 0;
 
   return (
-    <div className="flex flex-col items-center gap-2">
-      {/* Timer display */}
-      <div
-        className={`
-          rounded-xl border px-6 py-3 text-center font-mono transition-colors duration-300
-          ${
+    <div className="flex flex-col items-center">
+      <p className="font-label text-sm text-on-surface-variant font-medium">Waktu tersisa</p>
+      <div className="flex items-center gap-2 mt-1">
+        <span className="material-symbols-outlined text-primary-container text-lg">schedule</span>
+        <span
+          className={`font-headline font-bold text-2xl tracking-wider ${
             isExpired
-              ? "border-destructive/30 bg-destructive/10"
+              ? "text-error"
               : isUrgent
-                ? "border-destructive/30 bg-destructive/5"
-                : "border-primary/30 bg-primary/5"
-          }
-        `}
-      >
-        <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
-          {isExpired ? "Waktu habis" : "Sisa waktu pembayaran"}
-        </p>
-        <p
-          className={`
-            mt-1 text-3xl font-bold tabular-nums tracking-tight
-            ${isExpired ? "text-destructive" : isUrgent ? "text-destructive" : "text-primary-light"}
-          `}
+                ? "text-error"
+                : "text-primary-container"
+          }`}
         >
           {formatTime(secondsLeft)}
-        </p>
+        </span>
       </div>
-
-      {/* Urgency hint */}
       {isUrgent && !isExpired && (
-        <p className="text-xs text-destructive">
-          Segera selesaikan pembayaran
-        </p>
+        <p className="text-xs text-error mt-2">Segera selesaikan pembayaran</p>
       )}
     </div>
   );

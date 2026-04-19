@@ -32,62 +32,38 @@ export default function PaymentQR({
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card p-6">
-      {/* Header */}
-      <div className="mb-5 text-center">
-        <h3 className="text-base font-semibold text-foreground">
-          Scan QRIS untuk Bayar
-        </h3>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Gunakan aplikasi e-wallet atau mobile banking
-        </p>
-      </div>
-
-      {/* QR Code */}
-      <div className="flex justify-center">
-        <div className="rounded-xl bg-white p-4">
+    <div className="w-full flex flex-col items-center gap-8">
+      {/* QR Card */}
+      <div className="bg-[#111a11] p-8 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.4)] relative group transition-all duration-500 hover:shadow-[#4a7c59]/5">
+        <div className="bg-white p-4 rounded-2xl">
           <QRCodeSVG
             value={qrString}
-            size={256}
+            size={240}
             level="M"
             bgColor="#ffffff"
             fgColor="#000000"
+            className="w-60 h-60"
           />
         </div>
+        {/* Glossy overlay effect */}
+        <div className="absolute inset-0 rounded-3xl pointer-events-none border border-white/5 bg-gradient-to-br from-white/10 to-transparent opacity-30" />
       </div>
 
-      {/* Payment link */}
-      <div className="mt-5 space-y-2">
-        <p className="text-center text-[11px] text-muted-foreground">
-          Atau bagikan link pembayaran
-        </p>
-
-        <div className="flex items-center gap-2 rounded-lg border border-border bg-secondary p-2">
-          <span className="flex-1 truncate text-xs text-muted-foreground">
-            {paymentLink}
-          </span>
+      {/* Link Section */}
+      <div className="w-full flex flex-col gap-3">
+        <label className="font-label text-[10px] uppercase tracking-[0.1em] text-on-surface-variant ml-1">Payment Link</label>
+        <div className="bg-surface-container-high rounded-full pl-6 pr-2 py-2 flex items-center justify-between group transition-colors hover:bg-surface-container-highest">
+          <span className="text-on-surface/80 text-sm font-medium truncate mr-4">{paymentLink}</span>
           <button
             type="button"
             onClick={handleCopy}
-            className={`
-              shrink-0 rounded-md px-3 py-1.5 text-xs font-medium transition-all
-              ${
-                copied
-                  ? "bg-success text-primary-foreground"
-                  : "bg-primary text-primary-foreground hover:bg-primary-light"
-              }
-            `}
+            className="bg-primary-container text-on-primary-container p-2.5 rounded-full flex items-center justify-center hover:opacity-90 active:scale-90 transition-all duration-300 shadow-lg"
           >
-            {copied ? "Tersalin" : "Salin"}
+            <span className="material-symbols-outlined text-[20px]">
+              {copied ? "check" : "content_copy"}
+            </span>
           </button>
         </div>
-      </div>
-
-      {/* Order ID */}
-      <div className="mt-4 text-center">
-        <span className="text-[11px] text-muted-foreground">
-          Order ID: {orderId}
-        </span>
       </div>
     </div>
   );

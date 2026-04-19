@@ -61,11 +61,9 @@ export default function OrderTrackingPage() {
         data.order_status === "confirmed" ||
         data.order_status === "preparing"
       ) {
-        // Fetch queue position
         try {
           const queueRes = await fetch(`/api/order/${orderId}`);
           const queueData = await queueRes.json();
-          // Estimate: queue position * prep time + delivery time
           const deliveryTimeMin =
             (data.distance_km / AVG_DELIVERY_SPEED_KMH) * 60;
           const prepTime = PREP_TIME_MINUTES;
@@ -125,7 +123,7 @@ export default function OrderTrackingPage() {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="text-center space-y-4">
-          <p className="text-muted-foreground">Pesanan tidak ditemukan</p>
+          <p className="text-on-surface-variant">Pesanan tidak ditemukan</p>
           <button
             onClick={() => router.replace("/")}
             className="text-primary underline text-sm"
@@ -138,111 +136,86 @@ export default function OrderTrackingPage() {
   }
 
   return (
-    <main className="min-h-screen pb-24">
-      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-2xl border-b border-[#4a7c59]/10">
-        <div className="max-w-lg mx-auto px-5 py-4">
-          <h1 className="text-xl font-extrabold font-['Manrope'] tracking-tight text-center">
-            Status Pesanan
-          </h1>
-          <p className="text-[10px] uppercase tracking-[0.2em] text-[#c1c9bf] text-center mt-1">
-            {orderId}
-          </p>
+    <div className="font-body selection:bg-primary-container selection:text-on-primary-container">
+      {/* TopAppBar */}
+      <header className="bg-[#10150f]/80 backdrop-blur-xl fixed top-0 w-full z-50 border-b border-[#414942]/15">
+        <div className="flex justify-between items-center px-6 h-20 w-full">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => router.push("/")}
+              className="hover:opacity-80 transition-opacity active:scale-95 duration-200"
+            >
+              <span className="material-symbols-outlined text-[#9dd3aa]">arrow_back</span>
+            </button>
+            <div className="flex flex-col">
+              <h1 className="font-headline tracking-tight font-bold text-lg text-[#9dd3aa]">Status Pesanan</h1>
+              <span className="font-label text-[10px] tracking-wider text-on-surface-variant opacity-70">Order #{orderId}</span>
+            </div>
+          </div>
         </div>
       </header>
 
-      <div className="max-w-lg mx-auto px-5 pt-6 space-y-5">
+      <main className="pt-24 pb-32 px-6 max-w-2xl mx-auto space-y-8">
         {/* Status Tracker */}
         <OrderTracker
           currentStatus={order.order_status}
           estimatedMinutes={estimatedMinutes ?? undefined}
         />
 
-        {/* Estimated Time */}
-        {estimatedMinutes !== null && (
-          <div className="bg-[#1c211b] rounded-2xl p-5 text-center">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-[#c1c9bf]">Estimasi</p>
-            <p className="text-2xl font-black font-['Manrope'] text-[#9dd3aa] mt-1">
-              ~{estimatedMinutes} menit
-            </p>
-          </div>
-        )}
-
-        {/* Order Summary */}
-        <div className="space-y-3">
-          <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#c1c9bf]">
-            Detail Pesanan
-          </p>
-          <div className="bg-[#1c211b] rounded-2xl divide-y divide-[#414942]/30">
+        {/* Order Summary Card */}
+        <section className="bg-[#111a11] rounded-3xl p-6 border border-outline-variant/10">
+          <h4 className="font-headline font-bold text-lg mb-6 flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary">receipt_long</span>
+            Ringkasan Pesanan
+          </h4>
+          <div className="space-y-4">
             {order.items.map((item, i) => (
-              <div key={i} className="p-5 flex justify-between items-start">
-                <div className="flex-1">
-                  <p className="text-sm font-bold font-['Manrope'] text-foreground">
-                    {item.product_name} x{item.quantity}
-                  </p>
-                  {item.notes && (
-                    <p className="text-xs text-[#c1c9bf] mt-1">
-                      {item.notes}
-                    </p>
-                  )}
+              <div key={i} className="flex justify-between items-start">
+                <div className="flex gap-4">
+                  <div className="w-16 h-16 rounded-xl bg-surface-container overflow-hidden shrink-0">
+                    <div className="w-full h-full bg-gradient-to-br from-primary-container/20 to-surface-container" />
+                  </div>
+                  <div>
+                    <p className="font-headline font-bold text-on-surface">{item.product_name}</p>
+                    <p className="text-sm text-on-surface-variant">x{item.quantity}</p>
+                    {item.notes && (
+                      <p className="text-xs text-on-surface-variant mt-0.5">{item.notes}</p>
+                    )}
+                  </div>
                 </div>
-                <p className="text-sm font-medium text-foreground ml-4">
-                  {formatCurrency(item.price * item.quantity)}
-                </p>
+                <span className="font-headline font-bold text-on-surface">{formatCurrency(item.price * item.quantity)}</span>
               </div>
             ))}
-            <div className="p-5 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-[#c1c9bf]">Subtotal</span>
-                <span>{formatCurrency(order.subtotal)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-[#c1c9bf]">Ongkir</span>
-                <span
-                  className={
-                    order.delivery_fee === 0 ? "text-[#9dd3aa]" : "text-foreground"
-                  }
-                >
-                  {order.delivery_fee === 0
-                    ? "GRATIS"
-                    : formatCurrency(order.delivery_fee)}
-                </span>
-              </div>
-              <div className="border-t border-[#414942]/30 pt-3 flex justify-between items-center">
-                <span className="font-bold font-['Manrope']">Total</span>
-                <span className="text-xl font-black font-['Manrope'] text-[#9dd3aa]">
-                  {formatCurrency(order.total)}
-                </span>
-              </div>
-            </div>
           </div>
-        </div>
+          <div className="mt-8 pt-6 border-t border-outline-variant/15 flex justify-between items-center">
+            <span className="font-label text-sm uppercase tracking-widest text-on-surface-variant">Total Pembayaran</span>
+            <span className="font-headline text-2xl font-black text-primary">{formatCurrency(order.total)}</span>
+          </div>
+        </section>
 
         {/* Address */}
-        <div className="bg-[#1c211b] rounded-2xl p-5">
-          <p className="text-[10px] uppercase tracking-[0.2em] text-[#c1c9bf] mb-2">
-            Alamat Pengantaran
-          </p>
-          <p className="text-sm text-foreground">{order.customer_address}</p>
-          <p className="text-xs text-[#c1c9bf] mt-1">
-            {order.distance_km} km
-          </p>
-        </div>
+        <section className="bg-surface-container-low rounded-3xl p-5">
+          <p className="text-[10px] uppercase font-label tracking-wider text-on-surface-variant mb-2">Alamat Pengantaran</p>
+          <p className="font-headline font-bold text-on-surface">{order.customer_address}</p>
+          <p className="text-sm text-on-surface-variant mt-1">{order.distance_km} km</p>
+        </section>
+      </main>
 
-        {/* Actions */}
-        <div className="flex gap-3">
+      {/* Bottom Action Area */}
+      <footer className="fixed bottom-0 left-0 w-full bg-[#10150f]/90 backdrop-blur-2xl px-6 pt-4 pb-8 border-t border-[#414942]/15 z-50">
+        <div className="max-w-2xl mx-auto flex flex-col gap-3">
+          <WhatsAppButton
+            message={`Halo HiMeal, saya ingin menanyakan pesanan ${orderId}`}
+          />
           <button
             onClick={copyLink}
-            className="flex-1 py-4 rounded-full border border-[#4a7c59]/30 text-foreground text-xs font-extrabold uppercase tracking-widest hover:bg-[#1c211b] transition-colors"
+            className="w-full h-14 bg-transparent border border-outline-variant/30 rounded-full flex items-center justify-center gap-3 hover:bg-surface-container transition-colors active:scale-[0.98]"
           >
-            Salin Link
+            <span className="material-symbols-outlined text-on-surface-variant">content_copy</span>
+            <span className="font-headline font-bold text-on-surface">Salin Link</span>
           </button>
         </div>
-      </div>
-
-      {/* WhatsApp Button */}
-      <WhatsAppButton
-        message={`Halo HiMeal, saya ingin menanyakan pesanan ${orderId}`}
-      />
-    </main>
+      </footer>
+    </div>
   );
 }

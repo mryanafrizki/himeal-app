@@ -73,113 +73,129 @@ export default function CheckoutPage() {
   }
 
   return (
-    <main className="min-h-screen pb-32">
-      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-2xl border-b border-[#4a7c59]/10">
-        <div className="max-w-lg mx-auto px-5 py-4 flex items-center gap-3">
-          <button
-            onClick={() => router.back()}
-            className="w-10 h-10 rounded-full bg-[#1c211b] flex items-center justify-center text-foreground hover:bg-[#313630] transition-colors"
-          >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+    <>
+      {/* TopAppBar */}
+      <header className="bg-[#10150f]/80 backdrop-blur-xl fixed top-0 w-full z-50 border-none">
+        <div className="flex justify-between items-center w-full px-8 py-6 max-w-screen-2xl mx-auto">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => router.back()}
+              className="text-primary hover:opacity-80 transition-opacity active:scale-95 duration-200"
             >
-              <path d="M19 12H5M12 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <h1 className="text-xl font-extrabold font-['Manrope'] tracking-tight">
-            Ringkasan Pesanan
-          </h1>
+              <span className="material-symbols-outlined text-[#9dd3aa] text-3xl">eco</span>
+            </button>
+            <h1 className="font-['Manrope'] tracking-tighter font-bold uppercase text-[#9dd3aa] text-xl">Ringkasan Pesanan</h1>
+          </div>
+          <div className="text-3xl font-black text-[#9dd3aa] tracking-[-0.04em]">HiMeal</div>
         </div>
       </header>
 
-      <div className="max-w-lg mx-auto px-5 pt-6 space-y-5">
-        {/* Address */}
-        <div className="bg-[#1c211b] rounded-2xl p-5 space-y-2">
-          <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#c1c9bf]">
-            Alamat Pengantaran
-          </p>
-          <p className="text-sm text-foreground leading-relaxed">
-            {data.address}
-          </p>
-          <p className="text-xs text-[#c1c9bf]">
-            {data.distanceKm} km dari HiMeal
-          </p>
-        </div>
+      <main className="flex-grow pt-32 px-6 max-w-3xl mx-auto w-full">
+        {/* Delivery Address Card */}
+        <section className="mb-10">
+          <h2 className="font-headline text-on-surface-variant text-xs uppercase tracking-widest mb-4">Delivery Address</h2>
+          <div className="botanical-card rounded-xl p-6 flex items-start gap-5">
+            <div className="bg-primary-container/20 p-3 rounded-full">
+              <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>location_on</span>
+            </div>
+            <div className="flex-grow">
+              <p className="font-headline font-bold text-lg text-on-surface">{data.address}</p>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-on-surface-variant text-sm">{data.distanceKm} km from your kitchen</span>
+              </div>
+            </div>
+            <button
+              onClick={() => router.back()}
+              className="text-primary font-headline font-bold text-xs uppercase tracking-wider hover:opacity-80 transition-opacity"
+            >
+              Change
+            </button>
+          </div>
+        </section>
 
-        {/* Items */}
-        <div className="space-y-3">
-          <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#c1c9bf]">
-            Pesanan
-          </p>
-          <div className="bg-[#1c211b] rounded-2xl divide-y divide-[#414942]/30">
+        {/* Order Items */}
+        <section className="mb-10">
+          <h2 className="font-headline text-on-surface-variant text-xs uppercase tracking-widest mb-4">Your Selection</h2>
+          <div className="space-y-4">
             {data.items.map((item, i) => (
-              <div key={i} className="p-5 flex justify-between items-start">
-                <div className="flex-1">
-                  <p className="text-sm font-bold font-['Manrope'] text-foreground">
-                    {item.name} x{item.quantity}
-                  </p>
-                  {item.notes && (
-                    <p className="text-xs text-[#c1c9bf] mt-1">
-                      Catatan: {item.notes}
-                    </p>
-                  )}
+              <div key={i} className="botanical-card rounded-xl overflow-hidden flex items-center p-4 gap-6 group">
+                <div className="relative h-20 w-20 flex-shrink-0 rounded-lg overflow-hidden bg-surface-container">
+                  <div className="h-full w-full bg-gradient-to-br from-primary-container/20 to-surface-container" />
                 </div>
-                <p className="text-sm font-medium text-foreground ml-4">
-                  {formatCurrency(item.price * item.quantity)}
-                </p>
+                <div className="flex-grow">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-headline font-bold text-lg text-on-surface">{item.name}</h3>
+                      <p className="text-on-surface-variant text-sm font-medium">
+                        {item.notes || "Standard preparation"}
+                      </p>
+                    </div>
+                    <span className="font-headline font-bold text-on-surface">{formatCurrency(item.price * item.quantity)}</span>
+                  </div>
+                  <div className="mt-2 flex items-center text-primary-fixed-dim text-xs font-bold uppercase tracking-tighter">
+                    <span>Qty: {item.quantity}</span>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
-        </div>
+        </section>
 
-        {/* Price Breakdown */}
-        <div className="bg-[#1c211b] rounded-2xl p-5 space-y-3">
-          <div className="flex justify-between text-sm">
-            <span className="text-[#c1c9bf]">Subtotal</span>
-            <span className="text-foreground">
-              {formatCurrency(data.subtotal)}
-            </span>
+        {/* Pricing Summary Card */}
+        <section className="mb-20">
+          <div className="botanical-card rounded-xl p-8 space-y-4">
+            <div className="flex justify-between items-center text-on-surface-variant">
+              <span className="font-label text-sm uppercase tracking-wider">Subtotal</span>
+              <span className="font-headline font-medium text-on-surface">{formatCurrency(data.subtotal)}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="font-label text-sm uppercase tracking-wider text-on-surface-variant">Ongkir (Shipping)</span>
+              <span className="font-headline font-bold text-primary-container uppercase">
+                {data.deliveryFee === 0 ? "GRATIS" : formatCurrency(data.deliveryFee)}
+              </span>
+            </div>
+            <div className="pt-6 border-t border-outline-variant/30 flex justify-between items-end">
+              <div>
+                <span className="font-label text-xs uppercase tracking-[0.2em] text-on-surface-variant block mb-1">Total Amount</span>
+                <span className="font-headline font-black text-4xl text-primary tracking-tighter">{formatCurrency(data.total)}</span>
+              </div>
+              <div className="text-right">
+                <span className="text-on-surface-variant text-[10px] uppercase tracking-widest block">Incl. Tax (11%)</span>
+              </div>
+            </div>
           </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-[#c1c9bf]">Ongkir</span>
-            <span
-              className={
-                data.deliveryFee === 0 ? "text-[#9dd3aa]" : "text-foreground"
-              }
+        </section>
+
+        {/* Payment CTA */}
+        <section className="fixed bottom-0 left-0 w-full bg-background/95 backdrop-blur-md p-6 border-t border-outline-variant/10 z-50">
+          <div className="max-w-3xl mx-auto">
+            <button
+              onClick={handlePay}
+              disabled={isProcessing}
+              className="w-full bg-gradient-to-br from-primary to-primary-container text-on-primary font-headline font-extrabold text-lg py-5 rounded-full shadow-[0_20px_40px_rgba(74,124,89,0.2)] hover:scale-[1.02] active:scale-95 transition-all duration-300 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {data.deliveryFee === 0
-                ? "GRATIS"
-                : formatCurrency(data.deliveryFee)}
-            </span>
+              <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>lock</span>
+              {isProcessing ? "Memproses..." : "Bayar Sekarang"}
+            </button>
           </div>
-          <div className="border-t border-[#414942]/30 pt-4 flex justify-between items-center">
-            <span className="font-bold font-['Manrope'] text-foreground">Total</span>
-            <span className="text-xl font-black font-['Manrope'] text-[#9dd3aa]">
-              {formatCurrency(data.total)}
-            </span>
-          </div>
-        </div>
-      </div>
+        </section>
+      </main>
 
-      {/* Pay Button */}
-      <div className="fixed bottom-0 left-0 right-0 px-4 pb-8 pt-4 bg-gradient-to-t from-[#10150f] via-[#10150f]/95 to-transparent">
-        <div className="max-w-lg mx-auto">
-          <button
-            onClick={handlePay}
-            disabled={isProcessing}
-            className="w-full py-4 rounded-full bg-gradient-to-r from-[#4a7c59] to-[#3a6c49] text-white font-extrabold text-sm uppercase tracking-widest transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_20px_50px_rgba(0,0,0,0.4)]"
-          >
-            {isProcessing ? "Memproses..." : "Bayar Sekarang"}
-          </button>
+      {/* Footer */}
+      <footer className="bg-[#181d17] rounded-t-[2rem] mt-20">
+        <div className="flex flex-col md:flex-row justify-between items-center px-12 py-16 w-full max-w-screen-2xl mx-auto">
+          <div className="flex flex-col items-center md:items-start mb-8 md:mb-0">
+            <div className="text-lg font-bold text-[#9dd3aa] mb-2">HiMeal</div>
+            <p className="font-['Inter'] text-sm tracking-wide uppercase text-[#414942]">&copy; 2024 HiMeal. Good food, good mood.</p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-8">
+            <span className="font-['Inter'] text-sm tracking-wide uppercase text-[#414942] hover:text-[#9dd3aa] transition-opacity opacity-80 hover:opacity-100 cursor-pointer">Sourcing</span>
+            <span className="font-['Inter'] text-sm tracking-wide uppercase text-[#414942] hover:text-[#9dd3aa] transition-opacity opacity-80 hover:opacity-100 cursor-pointer">The Vault</span>
+            <span className="font-['Inter'] text-sm tracking-wide uppercase text-[#414942] hover:text-[#9dd3aa] transition-opacity opacity-80 hover:opacity-100 cursor-pointer">Nutrition</span>
+            <span className="font-['Inter'] text-sm tracking-wide uppercase text-[#414942] hover:text-[#9dd3aa] transition-opacity opacity-80 hover:opacity-100 cursor-pointer">Privacy</span>
+          </div>
         </div>
-      </div>
-    </main>
+      </footer>
+    </>
   );
 }

@@ -33,7 +33,7 @@ export default function CartSummary({
   if (items.length === 0) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50">
+    <div className="fixed bottom-0 left-0 right-0 z-[60]">
       {/* Expanded panel */}
       {isExpanded && (
         <>
@@ -47,11 +47,11 @@ export default function CartSummary({
           <div className="relative mx-auto max-w-lg rounded-t-[2rem] border border-b-0 border-[#4a7c59]/30 bg-[#111a11] shadow-2xl shadow-black/50">
             {/* Handle */}
             <div className="flex justify-center py-3">
-              <div className="h-1 w-10 rounded-full bg-[#414942]" />
+              <div className="h-1 w-10 rounded-full bg-outline-variant" />
             </div>
 
             <div className="max-h-[50vh] overflow-y-auto px-5 pb-2">
-              <h3 className="mb-4 text-lg font-bold font-['Manrope'] text-foreground">
+              <h3 className="mb-4 text-lg font-headline font-bold text-on-surface">
                 Ringkasan Pesanan
               </h3>
 
@@ -64,20 +64,20 @@ export default function CartSummary({
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#4a7c59]/20 text-[10px] font-bold text-[#9dd3aa]">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-container/20 text-[10px] font-bold text-primary">
                           {item.quantity}x
                         </span>
-                        <span className="truncate text-sm text-foreground">
+                        <span className="truncate text-sm text-on-surface">
                           {item.name}
                         </span>
                       </div>
                       {item.notes && (
-                        <p className="mt-0.5 pl-8 text-[11px] text-[#c1c9bf]">
+                        <p className="mt-0.5 pl-8 text-[11px] text-on-surface-variant">
                           {item.notes}
                         </p>
                       )}
                     </div>
-                    <span className="shrink-0 text-sm font-medium text-foreground">
+                    <span className="shrink-0 text-sm font-headline font-medium text-on-surface">
                       {formatCurrency(item.price * item.quantity)}
                     </span>
                   </div>
@@ -85,22 +85,24 @@ export default function CartSummary({
               </div>
 
               {/* Totals */}
-              <div className="mt-5 space-y-2 border-t border-[#414942]/50 pt-4">
-                <div className="flex justify-between text-xs text-[#c1c9bf]">
-                  <span>Subtotal</span>
-                  <span>{formatCurrency(subtotal)}</span>
+              <div className="mt-5 space-y-2 border-t border-outline-variant/30 pt-4">
+                <div className="flex justify-between text-xs text-on-surface-variant">
+                  <span className="font-label text-sm uppercase tracking-wider">Subtotal</span>
+                  <span className="font-headline font-medium text-on-surface">{formatCurrency(subtotal)}</span>
                 </div>
-                <div className="flex justify-between text-xs text-[#c1c9bf]">
-                  <span>Ongkos kirim</span>
-                  <span>
-                    {deliveryFee === 0 ? "Gratis" : formatCurrency(deliveryFee)}
+                <div className="flex justify-between text-xs">
+                  <span className="font-label text-sm uppercase tracking-wider text-on-surface-variant">Ongkir</span>
+                  <span className="font-headline font-bold text-primary-container uppercase">
+                    {deliveryFee === 0 ? "GRATIS" : formatCurrency(deliveryFee)}
                   </span>
                 </div>
-                <div className="flex justify-between text-base font-bold text-foreground">
-                  <span>Total</span>
-                  <span className="text-[#9dd3aa] font-black font-['Manrope']">
-                    {formatCurrency(total)}
-                  </span>
+                <div className="pt-4 border-t border-outline-variant/30 flex justify-between items-end">
+                  <div>
+                    <span className="font-label text-xs uppercase tracking-[0.2em] text-on-surface-variant block mb-1">Total Amount</span>
+                    <span className="font-headline font-black text-3xl text-primary tracking-tighter">
+                      {formatCurrency(total)}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -111,62 +113,32 @@ export default function CartSummary({
                 type="button"
                 onClick={onCheckout}
                 disabled={isLoading}
-                className="w-full rounded-full bg-[#4a7c59] py-4 text-sm font-extrabold uppercase tracking-widest text-white transition-all hover:bg-[#5a8c69] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-[#4a7c59] text-on-primary-container px-8 py-4 rounded-full font-headline font-extrabold uppercase tracking-widest text-sm hover:scale-105 active:scale-95 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? "Memproses..." : `Checkout - ${formatCurrency(total)}`}
+                {isLoading ? "Memproses..." : "Checkout"}
               </button>
             </div>
           </div>
         </>
       )}
 
-      {/* Collapsed bar */}
+      {/* Collapsed bar - matches Stitch floating cart */}
       {!isExpanded && (
-        <div className="px-4 pb-8 pt-4 bg-gradient-to-t from-[#10150f] via-[#10150f]/95 to-transparent">
-          <div className="mx-auto flex max-w-lg items-center gap-3 bg-[#1c211b]/90 backdrop-blur-2xl rounded-full shadow-[0_20px_50px_rgba(0,0,0,0.5)] px-4 py-3">
-            {/* Item count + subtotal */}
+        <div className="px-4 pb-8 pt-4 bg-gradient-to-t from-background to-transparent">
+          <div className="max-w-md mx-auto bg-surface-container/90 backdrop-blur-2xl rounded-full p-2 flex items-center justify-between shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-outline-variant/10">
             <button
               type="button"
               onClick={() => setIsExpanded(true)}
-              className="flex flex-1 items-center gap-3"
+              className="pl-6 py-1 text-left"
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#4a7c59] text-xs font-bold text-white">
-                {totalItems}
-              </span>
-              <div className="text-left">
-                <p className="text-[10px] uppercase tracking-widest text-[#c1c9bf]">
-                  {totalItems} item
-                </p>
-                <p className="text-lg font-black font-['Manrope'] text-foreground">
-                  {formatCurrency(total)}
-                </p>
-              </div>
-
-              {/* Expand chevron */}
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                className="ml-auto text-[#c1c9bf]"
-              >
-                <path
-                  d="M4 10L8 6L12 10"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              <div className="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">{totalItems} Items selected</div>
+              <div className="text-lg font-headline font-black text-on-surface leading-tight">{formatCurrency(total)}</div>
             </button>
-
-            {/* Checkout */}
             <button
               type="button"
               onClick={onCheckout}
               disabled={isLoading}
-              className="rounded-full bg-[#4a7c59] px-8 py-4 text-xs font-extrabold uppercase tracking-widest text-white transition-all hover:bg-[#5a8c69] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-[#4a7c59] text-on-primary-container px-8 py-4 rounded-full font-headline font-extrabold uppercase tracking-widest text-sm hover:scale-105 active:scale-95 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? "..." : "Checkout"}
             </button>

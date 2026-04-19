@@ -1,17 +1,6 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "HiMeal - Good Food, Good Mood",
@@ -31,12 +20,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="id"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
-      style={{ ["--font-headline" as string]: "'Manrope', sans-serif" }}
-    >
-      <body className="min-h-full flex flex-col">
+    <html lang="id" className="dark h-full antialiased">
+      <head>
+        <link
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body className="font-body text-on-surface min-h-full flex flex-col select-none overflow-x-hidden">
         {children}
         <Toaster
           position="top-center"
@@ -46,8 +37,8 @@ export default function RootLayout({
           toastOptions={{
             style: {
               background: "#111a11",
-              border: "1px solid #1e3a1e",
-              color: "#e8ede8",
+              border: "1px solid rgba(74, 124, 89, 0.2)",
+              color: "#dfe4db",
             },
           }}
         />

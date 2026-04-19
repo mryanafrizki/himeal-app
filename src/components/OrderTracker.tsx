@@ -4,35 +4,15 @@ interface OrderTrackerProps {
 }
 
 const STEPS = [
-  { key: "confirmed", label: "Pesanan Diterima" },
-  { key: "preparing", label: "Sedang Dimasak" },
-  { key: "delivering", label: "Sedang Diantar" },
-  { key: "delivered", label: "Selesai" },
+  { key: "confirmed", label: "Pesanan Diterima", icon: "check", description: "Pesanan telah dikonfirmasi oleh sistem" },
+  { key: "preparing", label: "Sedang Dimasak", icon: "restaurant", description: "Chef sedang menyiapkan bahan segar untuk Anda" },
+  { key: "delivering", label: "Sedang Diantar", icon: "delivery_dining", description: "Kurir akan segera menjemput pesanan Anda" },
+  { key: "delivered", label: "Selesai", icon: "task_alt", description: "Nikmati hidangan sehat Hi-Meal Anda" },
 ] as const;
 
 function getStepIndex(status: string): number {
   const idx = STEPS.findIndex((s) => s.key === status);
   return idx >= 0 ? idx : -1;
-}
-
-function CheckIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 14 14"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M3 7.5L5.5 10L11 4"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
 }
 
 export default function OrderTracker({
@@ -42,98 +22,79 @@ export default function OrderTracker({
   const currentIndex = getStepIndex(currentStatus);
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      {/* Header */}
-      <div className="mb-5 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-foreground">
-          Status Pesanan
-        </h3>
-        {estimatedMinutes !== undefined && estimatedMinutes > 0 && (
-          <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary-light">
-            ~{estimatedMinutes} menit
-          </span>
-        )}
-      </div>
+    <div className="space-y-0">
+      {/* Estimated Time Card */}
+      {estimatedMinutes !== undefined && estimatedMinutes > 0 && (
+        <section className="bg-[#111a11] rounded-3xl p-8 relative overflow-hidden mb-8">
+          <div className="absolute -top-12 -right-12 w-48 h-48 bg-primary/10 rounded-full blur-3xl" />
+          <div className="relative z-10">
+            <p className="font-label text-xs uppercase tracking-[0.1em] text-on-surface-variant mb-2">Waktu Kedatangan</p>
+            <h2 className="font-headline text-4xl font-extrabold text-primary tracking-tighter">Estimasi: ~{estimatedMinutes} menit</h2>
+            <div className="mt-6 h-2 w-full bg-surface-container-highest rounded-full overflow-hidden flex gap-1">
+              <div
+                className="h-full bg-gradient-to-r from-primary to-primary-container rounded-full"
+                style={{ width: `${Math.min(100, ((currentIndex + 1) / STEPS.length) * 100)}%` }}
+              />
+            </div>
+          </div>
+        </section>
+      )}
 
-      {/* Vertical stepper */}
-      <div className="space-y-0">
+      {/* Vertical Status Stepper */}
+      <section className="space-y-0 relative">
+        <div className="absolute left-[19px] top-4 bottom-4 w-[2px] bg-outline-variant/20" />
+
         {STEPS.map((step, i) => {
           const isCompleted = i < currentIndex;
           const isCurrent = i === currentIndex;
           const isFuture = i > currentIndex;
 
           return (
-            <div key={step.key} className="flex gap-3">
-              {/* Indicator column */}
-              <div className="flex flex-col items-center">
-                {/* Dot / check */}
-                <div
-                  className={`
-                    flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition-all
-                    ${
-                      isCompleted
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : isCurrent
-                          ? "border-primary bg-primary/20 text-primary-light"
-                          : "border-border bg-secondary text-muted-foreground"
-                    }
-                  `}
+            <div
+              key={step.key}
+              className={`relative flex items-start gap-6 ${i < STEPS.length - 1 ? "pb-10" : ""} ${isFuture ? "opacity-40" : ""}`}
+            >
+              {/* Step circle */}
+              <div
+                className={`z-10 w-10 h-10 rounded-full flex items-center justify-center ring-4 ring-[#0a0f0a] ${
+                  isCompleted
+                    ? "bg-primary-container"
+                    : isCurrent
+                      ? "bg-primary shadow-[0_0_20px_rgba(157,211,170,0.3)]"
+                      : "bg-surface-container-highest"
+                }`}
+              >
+                <span
+                  className={`material-symbols-outlined text-xl ${
+                    isCompleted
+                      ? "text-on-primary-container"
+                      : isCurrent
+                        ? "text-on-primary"
+                        : "text-on-surface-variant"
+                  }`}
+                  style={isCurrent ? { fontVariationSettings: "'FILL' 1" } : undefined}
                 >
-                  {isCompleted ? (
-                    <CheckIcon />
-                  ) : (
-                    <span className="text-[10px] font-bold">{i + 1}</span>
-                  )}
-                </div>
-
-                {/* Connecting line */}
-                {i < STEPS.length - 1 && (
-                  <div
-                    className={`
-                      w-0.5 flex-1 min-h-[28px] transition-colors
-                      ${isCompleted ? "bg-primary" : "bg-border"}
-                    `}
-                  />
-                )}
+                  {isCompleted ? "check" : step.icon}
+                </span>
               </div>
 
-              {/* Label */}
-              <div className={`pb-5 ${i === STEPS.length - 1 ? "pb-0" : ""}`}>
-                <p
-                  className={`
-                    pt-1 text-sm font-medium transition-colors
-                    ${
-                      isCompleted
-                        ? "text-primary-light"
-                        : isCurrent
-                          ? "text-foreground"
-                          : "text-muted-foreground"
-                    }
-                  `}
+              {/* Step content */}
+              <div className="pt-1">
+                <h3
+                  className={`font-headline font-bold ${
+                    isCurrent ? "text-primary" : "text-on-surface"
+                  }`}
                 >
                   {step.label}
+                </h3>
+                <p className={`text-sm font-medium ${isCurrent ? "text-on-surface" : "text-on-surface-variant"}`}>
+                  {step.description}
                 </p>
-                {isCurrent && (
-                  <div className="mt-1 flex items-center gap-1.5">
-                    <span className="relative flex h-2 w-2">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-                      <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
-                    </span>
-                    <span className="text-[11px] text-muted-foreground">
-                      Sedang berlangsung
-                    </span>
-                  </div>
-                )}
-                {isFuture && isCurrent === false && (
-                  <p className="mt-0.5 text-[11px] text-muted-foreground/50">
-                    Menunggu
-                  </p>
-                )}
               </div>
             </div>
           );
         })}
-      </div>
+      </section>
     </div>
   );
 }
