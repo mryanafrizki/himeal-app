@@ -33,11 +33,16 @@ export const MENU_ITEMS: MenuItem[] = [
   },
 ];
 
+export type OrderType = "delivery" | "takeaway";
+
 export const DELIVERY_CONFIG = {
   freeDistanceKm: 5,
-  feePerTierIDR: 5000,
-  tierDistanceKm: 10,
+  baseFeeIDR: 8000,       // biaya minimum 4km pertama (mirip GoFood Zona I)
+  baseDistanceKm: 4,      // jarak yang tercover biaya minimum
+  perKmIDR: 2000,         // Rp 2.000/km (Zona I batas bawah)
 } as const;
+
+export const HIMEAL_MAPS_EMBED = `https://maps.google.com/maps?q=${HIMEAL_ORIGIN.lat},${HIMEAL_ORIGIN.lng}&z=17&output=embed`;
 
 export const ORDER_STATUS = {
   PENDING_PAYMENT: "pending_payment",

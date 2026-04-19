@@ -34,11 +34,23 @@ export async function calculateRoadDistance(
   return distance / 1000;
 }
 
+/**
+ * Delivery fee model (mirip GoFood/GrabFood Zona I):
+ * - Free ongkir: 0-5 km (subsidi dari HiMeal)
+ * - 5-9 km: biaya minimum Rp 8.000 (base fee untuk 4km pertama setelah free zone)
+ * - 9+ km: Rp 8.000 + Rp 2.000 per km tambahan
+ */
 export function calculateDeliveryFee(distanceKm: number): number {
   if (distanceKm <= DELIVERY_CONFIG.freeDistanceKm) {
     return 0;
   }
-  const extraKm = distanceKm - DELIVERY_CONFIG.freeDistanceKm;
-  const tiers = Math.ceil(extraKm / DELIVERY_CONFIG.tierDistanceKm);
-  return tiers * DELIVERY_CONFIG.feePerTierIDR;
+
+  const chargeableKm = distanceKm - DELIVERY_CONFIG.freeDistanceKm;
+
+  if (chargeableKm <= DELIVERY_CONFIG.baseDistanceKm) {
+    return DELIVERY_CONFIG.baseFeeIDR;
+  }
+
+  const extraKm = chargeableKm - DELIVERY_CONFIG.baseDistanceKm;
+  return DELIVERY_CONFIG.baseFeeIDR + Math.ceil(extraKm) * DELIVERY_CONFIG.perKmIDR;
 }

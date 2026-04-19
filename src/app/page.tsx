@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { MENU_ITEMS, formatCurrency } from "@/lib/constants";
+import { MENU_ITEMS, formatCurrency, HIMEAL_MAPS_EMBED, type OrderType } from "@/lib/constants";
 import {
   calculateRoadDistance,
   calculateDeliveryFee,
@@ -24,6 +24,7 @@ interface CartItem {
 export default function HomePage() {
   const router = useRouter();
   const [cart, setCart] = useState<Record<string, CartItem>>({});
+  const [orderType, setOrderType] = useState<OrderType>("delivery");
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [address, setAddress] = useState("");
@@ -114,7 +115,7 @@ export default function HomePage() {
       toast.error("Nomor WhatsApp wajib diisi");
       return;
     }
-    if (!address.trim()) {
+    if (orderType === "delivery" && !address.trim()) {
       toast.error("Alamat pengantaran wajib diisi");
       return;
     }
@@ -130,12 +131,13 @@ export default function HomePage() {
             quantity: item.quantity,
             notes: item.notes || undefined,
           })),
+          orderType,
           customerName: customerName.trim(),
           customerPhone: customerPhone.trim(),
-          address,
-          addressNotes: addressNotes.trim() || undefined,
-          lat: selectedLat,
-          lng: selectedLng,
+          address: orderType === "delivery" ? address : "Takeaway - Ambil di lokasi HiMeal",
+          addressNotes: orderType === "delivery" ? (addressNotes.trim() || undefined) : undefined,
+          lat: orderType === "delivery" ? selectedLat : undefined,
+          lng: orderType === "delivery" ? selectedLng : undefined,
         }),
       });
 
@@ -150,14 +152,15 @@ export default function HomePage() {
         JSON.stringify({
           orderId: data.orderId,
           items: cartItems,
+          orderType,
           customerName: customerName.trim(),
           customerPhone: customerPhone.trim(),
           subtotal: data.subtotal,
           deliveryFee: data.deliveryFee,
           total: data.total,
           distanceKm: data.distanceKm,
-          address,
-          addressNotes: addressNotes.trim(),
+          address: orderType === "delivery" ? address : "Takeaway - Ambil di lokasi HiMeal",
+          addressNotes: orderType === "delivery" ? addressNotes.trim() : "",
         })
       );
 
@@ -236,15 +239,46 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Customer & Delivery Section */}
+        {/* Customer & Order Type Section */}
         <section className="space-y-6 lg:sticky lg:top-24 lg:self-start">
-          <h3 className="text-lg font-headline font-bold text-on-surface tracking-tight">Detail Pengantaran</h3>
+          <h3 className="text-lg font-headline font-bold text-on-surface tracking-tight">Detail Pesanan</h3>
+
+          {/* Order Type Toggle */}
+          <div className="space-y-2">
+            <label className="font-label text-xs uppercase tracking-widest text-on-surface-variant font-medium">Tipe Pesanan</label>
+            <div className="flex gap-2 bg-surface-container rounded-2xl p-1.5">
+              <button
+                type="button"
+                onClick={() => { setOrderType("delivery"); setDeliveryFee(0); setDistanceKm(null); }}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all ${
+                  orderType === "delivery"
+                    ? "bg-primary-container text-on-primary-container shadow-lg"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+              >
+                <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: orderType === "delivery" ? "'FILL' 1" : "'FILL' 0" }}>delivery_dining</span>
+                Delivery
+              </button>
+              <button
+                type="button"
+                onClick={() => { setOrderType("takeaway"); setDeliveryFee(0); setDistanceKm(null); }}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all ${
+                  orderType === "takeaway"
+                    ? "bg-primary-container text-on-primary-container shadow-lg"
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+              >
+                <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: orderType === "takeaway" ? "'FILL' 1" : "'FILL' 0" }}>shopping_bag</span>
+                Takeaway
+              </button>
+            </div>
+          </div>
 
           {/* Customer Name */}
           <div className="space-y-2">
             <label className="font-label text-xs uppercase tracking-widest text-on-surface-variant font-medium">Nama Pemesan *</label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-primary text-lg">person</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-primary text-lg pointer-events-none">person</span>
               <input
                 type="text"
                 value={customerName}
@@ -259,7 +293,7 @@ export default function HomePage() {
           <div className="space-y-2">
             <label className="font-label text-xs uppercase tracking-widest text-on-surface-variant font-medium">No. WhatsApp *</label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-primary text-lg">phone</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-primary text-lg pointer-events-none">phone</span>
               <input
                 type="tel"
                 value={customerPhone}
@@ -270,53 +304,85 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Address Search */}
-          <div className="space-y-2">
-            <label className="font-label text-xs uppercase tracking-widest text-on-surface-variant font-medium">Alamat Lengkap *</label>
-            <AddressSearch value={address} onChange={handleAddressSelect} />
-          </div>
-
-          {/* Address Notes */}
-          <div className="space-y-2">
-            <label className="font-label text-xs uppercase tracking-widest text-on-surface-variant font-medium">Catatan Alamat</label>
-            <div className="relative">
-              <span className="absolute left-4 top-4 material-symbols-outlined text-primary text-lg">edit_note</span>
-              <textarea
-                value={addressNotes}
-                onChange={(e) => setAddressNotes(e.target.value)}
-                placeholder="Contoh: Taro di pager, rumah cat hijau, lantai 2"
-                rows={2}
-                className="w-full pl-12 pr-4 py-4 bg-surface-container border-none rounded-2xl text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary shadow-inner resize-none"
-              />
-            </div>
-          </div>
-
-          {/* Share Location (Optional) */}
-          <div className="space-y-2">
-            <label className="font-label text-xs uppercase tracking-widest text-on-surface-variant font-medium">Titik Lokasi (Opsional)</label>
-            <DeliveryMap
-              onLocationSelect={handleMapSelect}
-              selectedLat={selectedLat}
-              selectedLng={selectedLng}
-            />
-          </div>
-
-          {/* Distance & Fee Info */}
-          {distanceKm !== null && distanceKm > 0 && (
-            <div className="botanical-card rounded-xl p-5 flex items-center justify-between">
-              <div>
-                <p className="text-xs text-on-surface-variant">Jarak (via jalan)</p>
-                <p className="font-headline font-bold text-lg text-on-surface">
-                  {distanceKm} km
-                </p>
+          {/* Delivery-specific fields */}
+          {orderType === "delivery" && (
+            <>
+              {/* Address Search */}
+              <div className="space-y-2">
+                <label className="font-label text-xs uppercase tracking-widest text-on-surface-variant font-medium">Alamat Lengkap *</label>
+                <AddressSearch value={address} onChange={handleAddressSelect} />
               </div>
-              <div className="text-right">
-                <p className="text-xs text-on-surface-variant">Ongkir</p>
-                <p
-                  className={`font-headline font-bold text-lg ${deliveryFee === 0 ? "text-primary-container uppercase" : "text-on-surface"}`}
-                >
-                  {deliveryFee === 0 ? "GRATIS" : formatCurrency(deliveryFee)}
-                </p>
+
+              {/* Address Notes */}
+              <div className="space-y-2">
+                <label className="font-label text-xs uppercase tracking-widest text-on-surface-variant font-medium">Catatan Alamat</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-4 material-symbols-outlined text-primary text-lg pointer-events-none">edit_note</span>
+                  <textarea
+                    value={addressNotes}
+                    onChange={(e) => setAddressNotes(e.target.value)}
+                    placeholder="Contoh: Taro di pager, rumah cat hijau, lantai 2"
+                    rows={2}
+                    className="w-full pl-12 pr-4 py-4 bg-surface-container border-none rounded-2xl text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary shadow-inner resize-none"
+                  />
+                </div>
+              </div>
+
+              {/* Share Location (Optional) */}
+              <div className="space-y-2">
+                <label className="font-label text-xs uppercase tracking-widest text-on-surface-variant font-medium">Titik Lokasi (Opsional)</label>
+                <DeliveryMap
+                  onLocationSelect={handleMapSelect}
+                  selectedLat={selectedLat}
+                  selectedLng={selectedLng}
+                />
+              </div>
+
+              {/* Distance & Fee Info */}
+              {distanceKm !== null && distanceKm > 0 && (
+                <div className="botanical-card rounded-xl p-5 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-on-surface-variant">Jarak (via jalan)</p>
+                    <p className="font-headline font-bold text-lg text-on-surface">
+                      {distanceKm} km
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-on-surface-variant">Ongkir</p>
+                    <p
+                      className={`font-headline font-bold text-lg ${deliveryFee === 0 ? "text-primary-container uppercase" : "text-on-surface"}`}
+                    >
+                      {deliveryFee === 0 ? "GRATIS" : formatCurrency(deliveryFee)}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Takeaway - show HiMeal location */}
+          {orderType === "takeaway" && (
+            <div className="space-y-3">
+              <div className="botanical-card rounded-xl p-5 space-y-3">
+                <div className="flex items-center gap-3">
+                  <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>storefront</span>
+                  <div>
+                    <p className="font-headline font-bold text-on-surface">Ambil di Lokasi HiMeal</p>
+                    <p className="text-sm text-on-surface-variant">Juple&apos;s House, Purwokerto</p>
+                  </div>
+                </div>
+                <p className="text-xs text-primary-container font-semibold uppercase tracking-widest">Ongkir: GRATIS</p>
+              </div>
+              <div className="rounded-2xl overflow-hidden border border-outline-variant/20 h-44">
+                <iframe
+                  title="Lokasi HiMeal"
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  src={HIMEAL_MAPS_EMBED}
+                />
               </div>
             </div>
           )}
