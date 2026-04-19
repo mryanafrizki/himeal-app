@@ -20,20 +20,14 @@ function extractCoordsFromUrl(url: string): { lat: number; lng: number } | null 
   const placeMatch = url.match(/\/place\/(-?\d+\.?\d*),(-?\d+\.?\d*)/);
   if (placeMatch) return { lat: parseFloat(placeMatch[1]), lng: parseFloat(placeMatch[2]) };
 
-  const llMatch = url.match(/ll=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
-  if (llMatch) return { lat: parseFloat(llMatch[1]), lng: parseFloat(llMatch[2]) };
+  const dataMatch = url.match(/!3d(-?\d+\.?\d*)!4d(-?\d+\.?\d*)/);
+  if (dataMatch) return { lat: parseFloat(dataMatch[1]), lng: parseFloat(dataMatch[2]) };
 
   return null;
 }
 
-function buildEmbedUrl(lat?: number, lng?: number, rawLink?: string): string {
-  if (lat !== undefined && lng !== undefined) {
-    return `https://maps.google.com/maps?q=${lat},${lng}&z=17&output=embed`;
-  }
-  if (rawLink) {
-    return `https://maps.google.com/maps?q=${encodeURIComponent(rawLink)}&z=17&output=embed`;
-  }
-  return "";
+function isShortLink(url: string): boolean {
+  return url.includes("maps.app.goo.gl") || url.includes("goo.gl/maps");
 }
 
 export default function DeliveryMap({
@@ -45,14 +39,13 @@ export default function DeliveryMap({
   const [showMap, setShowMap] = useState(false);
   const [linkInput, setLinkInput] = useState("");
   const [linkError, setLinkError] = useState<string | null>(null);
+  const [linkLoading, setLinkLoading] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
   const [gpsLoading, setGpsLoading] = useState(false);
-  const [rawLink, setRawLink] = useState<string | null>(null);
 
   const hasLocation = selectedLat !== undefined && selectedLng !== undefined;
-  const hasEmbed = hasLocation || rawLink !== null;
 
-  const handlePasteLink = useCallback(() => {
+  const handlePasteLink = useCallback(async () => {
     const trimmed = linkInput.trim();
     if (!trimmed) {
       setLinkError("Tempel link Google Maps");
@@ -72,14 +65,49 @@ export default function DeliveryMap({
 
     setLinkError(null);
 
-    const coords = extractCoordsFromUrl(trimmed);
-    if (coords) {
-      onLocationSelect(coords.lat, coords.lng);
-      setRawLink(null);
-    } else {
-      setRawLink(trimmed);
+    // Try extract coords directly from URL
+    const directCoords = extractCoordsFromUrl(trimmed);
+    if (directCoords) {
+      onLocationSelect(directCoords.lat, directCoords.lng);
+      setShowMap(true);
+      return;
     }
-    setShowMap(true);
+
+    // Short link - resolve via server
+    if (isShortLink(trimmed)) {
+      setLinkLoading(true);
+      try {
+        const res = await fetch("/api/maps/resolve", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: trimmed }),
+        });
+        const data = await res.json();
+
+        if (data.coords) {
+          onLocationSelect(data.coords.lat, data.coords.lng);
+          setShowMap(true);
+        } else if (data.finalUrl) {
+          // Try extract from resolved URL
+          const resolved = extractCoordsFromUrl(data.finalUrl);
+          if (resolved) {
+            onLocationSelect(resolved.lat, resolved.lng);
+            setShowMap(true);
+          } else {
+            setLinkError("Tidak dapat membaca koordinat dari link. Coba link yang lebih spesifik (klik lokasi di Google Maps lalu share).");
+          }
+        } else {
+          setLinkError("Gagal memproses link. Coba lagi.");
+        }
+      } catch {
+        setLinkError("Gagal memproses link. Coba lagi.");
+      } finally {
+        setLinkLoading(false);
+      }
+      return;
+    }
+
+    setLinkError("Tidak dapat membaca koordinat dari link ini.");
   }, [linkInput, onLocationSelect]);
 
   const handleGPS = useCallback(() => {
@@ -99,7 +127,6 @@ export default function DeliveryMap({
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         onLocationSelect(pos.coords.latitude, pos.coords.longitude);
-        setRawLink(null);
         setShowMap(true);
         setGpsLoading(false);
       },
@@ -117,7 +144,9 @@ export default function DeliveryMap({
     );
   }, [onLocationSelect]);
 
-  const embedUrl = buildEmbedUrl(selectedLat, selectedLng, rawLink ?? undefined);
+  const embedUrl = hasLocation
+    ? `https://maps.google.com/maps?q=${selectedLat},${selectedLng}&z=17&output=embed`
+    : "";
 
   return (
     <div className="space-y-4">
@@ -129,7 +158,7 @@ export default function DeliveryMap({
       >
         <div className="flex items-center gap-3">
           <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>pin_drop</span>
-          <span>{hasEmbed ? "Titik lokasi sudah ditentukan" : "Tentukan titik lokasi (opsional)"}</span>
+          <span>{hasLocation ? "Titik lokasi sudah ditentukan" : "Tentukan titik lokasi (opsional)"}</span>
         </div>
         <span className="material-symbols-outlined text-on-surface-variant text-lg">
           {showMap ? "expand_less" : "expand_more"}
@@ -185,9 +214,10 @@ export default function DeliveryMap({
                 <button
                   type="button"
                   onClick={handlePasteLink}
-                  className="px-5 py-3 bg-primary-container text-on-primary-container rounded-xl text-sm font-bold hover:opacity-90 transition-opacity active:scale-95 shrink-0"
+                  disabled={linkLoading}
+                  className="px-5 py-3 bg-primary-container text-on-primary-container rounded-xl text-sm font-bold hover:opacity-90 transition-opacity active:scale-95 shrink-0 disabled:opacity-50"
                 >
-                  Terapkan
+                  {linkLoading ? "..." : "Terapkan"}
                 </button>
               </div>
               {linkError && <p className="text-xs text-error">{linkError}</p>}
@@ -211,8 +241,8 @@ export default function DeliveryMap({
             </div>
           )}
 
-          {/* Google Maps Embed - interactive, bisa geser */}
-          {hasEmbed && (
+          {/* Google Maps Embed - only when we have actual coordinates */}
+          {hasLocation && (
             <div className="rounded-2xl overflow-hidden border border-outline-variant/20" style={{ height: "250px" }}>
               <iframe
                 title="Lokasi pengantaran"
