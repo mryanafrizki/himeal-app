@@ -135,7 +135,7 @@ export default function HomePage() {
           customerName: customerName.trim(),
           customerPhone: customerPhone.trim(),
           address: orderType === "delivery" ? address : "Takeaway - Ambil di lokasi HiMeal",
-          addressNotes: orderType === "delivery" ? (addressNotes.trim() || undefined) : undefined,
+          addressNotes: addressNotes.trim() || undefined,
           lat: orderType === "delivery" ? selectedLat : undefined,
           lng: orderType === "delivery" ? selectedLng : undefined,
         }),
@@ -360,9 +360,9 @@ export default function HomePage() {
             </>
           )}
 
-          {/* Takeaway - show HiMeal location */}
+          {/* Takeaway - show HiMeal location + catatan */}
           {orderType === "takeaway" && (
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div className="botanical-card rounded-xl p-5 space-y-3">
                 <div className="flex items-center gap-3">
                   <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>storefront</span>
@@ -373,15 +373,32 @@ export default function HomePage() {
                 </div>
                 <p className="text-xs text-primary-container font-semibold uppercase tracking-widest">Ongkir: GRATIS</p>
               </div>
-              <div className="rounded-2xl overflow-hidden border border-outline-variant/20 h-44">
+
+              {/* Catatan Takeaway */}
+              <div className="space-y-2">
+                <label className="font-label text-xs uppercase tracking-widest text-on-surface-variant font-medium">Catatan</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-4 material-symbols-outlined text-primary text-lg pointer-events-none">edit_note</span>
+                  <textarea
+                    value={addressNotes}
+                    onChange={(e) => setAddressNotes(e.target.value)}
+                    placeholder="Contoh: Ambil jam 12 siang, minta extra sambal"
+                    rows={2}
+                    className="w-full pl-12 pr-4 py-4 bg-surface-container border-none rounded-2xl text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary shadow-inner resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-2xl overflow-hidden border border-outline-variant/20" style={{ height: "200px" }}>
                 <iframe
                   title="Lokasi HiMeal"
                   width="100%"
                   height="100%"
                   style={{ border: 0 }}
                   loading="lazy"
+                  allowFullScreen
                   referrerPolicy="no-referrer-when-downgrade"
-                  src={HIMEAL_MAPS_EMBED}
+                  src={`https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d1500!2d109.2237517!3d-7.434855!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sen!2sid!4v1`}
                 />
               </div>
             </div>
