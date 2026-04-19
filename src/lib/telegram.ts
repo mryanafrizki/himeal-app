@@ -40,6 +40,8 @@ export interface OrderNotificationData {
   customerPhone: string;
   customerAddress: string;
   addressNotes?: string | null;
+  customerLat?: number | null;
+  customerLng?: number | null;
   items: Array<{ name: string; qty: number; price: number }>;
   subtotal: number;
   deliveryFee: number;
@@ -64,6 +66,10 @@ export function buildNewOrderMessage(data: OrderNotificationData): string {
 
   if (data.addressNotes) {
     msg += `\n<b>Catatan alamat:</b> ${escapeHtml(data.addressNotes)}`;
+  }
+
+  if (data.customerLat && data.customerLng) {
+    msg += `\n<b>Maps:</b> <a href="https://maps.google.com/maps?q=${data.customerLat},${data.customerLng}">Buka di Google Maps</a>`;
   }
 
   msg += `\n<b>Jarak:</b> ${data.distanceKm > 0 ? data.distanceKm + " km" : "Belum ditentukan"}
