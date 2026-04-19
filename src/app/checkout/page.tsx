@@ -13,11 +13,14 @@ interface CheckoutData {
     price: number;
     notes: string;
   }>;
+  customerName: string;
+  customerPhone: string;
   subtotal: number;
   deliveryFee: number;
   total: number;
   distanceKm: number;
   address: string;
+  addressNotes?: string;
 }
 
 export default function CheckoutPage() {
@@ -91,24 +94,44 @@ export default function CheckoutPage() {
       </header>
 
       <main className="flex-grow pt-32 px-6 max-w-3xl mx-auto w-full">
+        {/* Customer Info */}
+        <section className="mb-10">
+          <h2 className="font-headline text-on-surface-variant text-xs uppercase tracking-widest mb-4">Pemesan</h2>
+          <div className="botanical-card rounded-xl p-6 space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>person</span>
+              <p className="font-headline font-bold text-on-surface">{data.customerName}</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>phone</span>
+              <p className="text-on-surface-variant text-sm">{data.customerPhone}</p>
+            </div>
+          </div>
+        </section>
+
         {/* Delivery Address Card */}
         <section className="mb-10">
-          <h2 className="font-headline text-on-surface-variant text-xs uppercase tracking-widest mb-4">Delivery Address</h2>
+          <h2 className="font-headline text-on-surface-variant text-xs uppercase tracking-widest mb-4">Alamat Pengantaran</h2>
           <div className="botanical-card rounded-xl p-6 flex items-start gap-5">
             <div className="bg-primary-container/20 p-3 rounded-full">
               <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>location_on</span>
             </div>
             <div className="flex-grow">
               <p className="font-headline font-bold text-lg text-on-surface">{data.address}</p>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-on-surface-variant text-sm">{data.distanceKm} km from your kitchen</span>
-              </div>
+              {data.addressNotes && (
+                <p className="text-on-surface-variant text-sm mt-1">{data.addressNotes}</p>
+              )}
+              {data.distanceKm > 0 && (
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-on-surface-variant text-sm">{data.distanceKm} km via jalan</span>
+                </div>
+              )}
             </div>
             <button
               onClick={() => router.back()}
               className="text-primary font-headline font-bold text-xs uppercase tracking-wider hover:opacity-80 transition-opacity"
             >
-              Change
+              Ubah
             </button>
           </div>
         </section>

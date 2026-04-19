@@ -36,7 +36,10 @@ export async function sendTelegramNotification(
 
 export interface OrderNotificationData {
   orderId: string;
+  customerName: string;
+  customerPhone: string;
   customerAddress: string;
+  addressNotes?: string | null;
   items: Array<{ name: string; qty: number; price: number }>;
   subtotal: number;
   deliveryFee: number;
@@ -52,11 +55,18 @@ export function buildNewOrderMessage(data: OrderNotificationData): string {
     )
     .join("\n");
 
-  return `<b>PESANAN BARU</b>
+  let msg = `<b>PESANAN BARU</b>
 
 <b>Order:</b> <code>${escapeHtml(data.orderId)}</code>
-<b>Alamat:</b> ${escapeHtml(data.customerAddress)}
-<b>Jarak:</b> ${data.distanceKm} km
+<b>Nama:</b> ${escapeHtml(data.customerName)}
+<b>WA:</b> ${escapeHtml(data.customerPhone)}
+<b>Alamat:</b> ${escapeHtml(data.customerAddress)}`;
+
+  if (data.addressNotes) {
+    msg += `\n<b>Catatan alamat:</b> ${escapeHtml(data.addressNotes)}`;
+  }
+
+  msg += `\n<b>Jarak:</b> ${data.distanceKm > 0 ? data.distanceKm + " km" : "Belum ditentukan"}
 
 <b>Items:</b>
 ${itemLines}
@@ -64,6 +74,8 @@ ${itemLines}
 <b>Subtotal:</b> Rp ${data.subtotal.toLocaleString("id-ID")}
 <b>Ongkir:</b> Rp ${data.deliveryFee.toLocaleString("id-ID")}
 <b>Total:</b> <b>Rp ${data.total.toLocaleString("id-ID")}</b>`;
+
+  return msg;
 }
 
 export function buildPaymentConfirmedMessage(

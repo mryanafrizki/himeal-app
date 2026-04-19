@@ -31,7 +31,10 @@ interface CartItem {
 export default function HomePage() {
   const router = useRouter();
   const [cart, setCart] = useState<Record<string, CartItem>>({});
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
   const [address, setAddress] = useState("");
+  const [addressNotes, setAddressNotes] = useState("");
   const [selectedLat, setSelectedLat] = useState<number | undefined>();
   const [selectedLng, setSelectedLng] = useState<number | undefined>();
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
@@ -70,28 +73,7 @@ export default function HomePage() {
     });
   }, []);
 
-  const handleAddressSelect = useCallback(
-    async (addr: string, lat: number, lng: number) => {
-      setAddress(addr);
-      setSelectedLat(lat);
-      setSelectedLng(lng);
-      try {
-        const dist = await calculateRoadDistance(lat, lng);
-        const fee = calculateDeliveryFee(dist);
-        setDistanceKm(Math.round(dist * 100) / 100);
-        setDeliveryFee(fee);
-      } catch {
-        toast.error("Gagal menghitung jarak. Coba lagi.");
-        setDistanceKm(null);
-        setDeliveryFee(0);
-      }
-    },
-    []
-  );
-
-  const handleMapSelect = useCallback(async (lat: number, lng: number) => {
-    setSelectedLat(lat);
-    setSelectedLng(lng);
+  const recalcDistance = useCallback(async (lat: number, lng: number) => {
     try {
       const dist = await calculateRoadDistance(lat, lng);
       const fee = calculateDeliveryFee(dist);
@@ -102,6 +84,22 @@ export default function HomePage() {
       setDistanceKm(null);
       setDeliveryFee(0);
     }
+  }, []);
+
+  const handleAddressSelect = useCallback(
+    async (addr: string, lat: number, lng: number) => {
+      setAddress(addr);
+      setSelectedLat(lat);
+      setSelectedLng(lng);
+      await recalcDistance(lat, lng);
+    },
+    [recalcDistance]
+  );
+
+  const handleMapSelect = useCallback(async (lat: number, lng: number) => {
+    setSelectedLat(lat);
+    setSelectedLng(lng);
+    await recalcDistance(lat, lng);
 
     try {
       const res = await fetch(
@@ -111,13 +109,11 @@ export default function HomePage() {
       const data = await res.json();
       if (data.display_name) {
         setAddress(data.display_name);
-      } else {
-        setAddress(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
       }
     } catch {
-      setAddress(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+      // silent
     }
-  }, []);
+  }, [recalcDistance]);
 
   const cartItems = Object.values(cart);
   const subtotal = cartItems.reduce(
@@ -125,15 +121,21 @@ export default function HomePage() {
     0
   );
 
-  const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-
   const handleCheckout = async () => {
     if (cartItems.length === 0) {
       toast.error("Pilih minimal satu menu");
       return;
     }
-    if (!address || !selectedLat || !selectedLng) {
-      toast.error("Tentukan alamat dan titik pengantaran di peta");
+    if (!customerName.trim()) {
+      toast.error("Nama pemesan wajib diisi");
+      return;
+    }
+    if (!customerPhone.trim()) {
+      toast.error("Nomor WhatsApp wajib diisi");
+      return;
+    }
+    if (!address.trim()) {
+      toast.error("Alamat pengantaran wajib diisi");
       return;
     }
 
@@ -148,7 +150,10 @@ export default function HomePage() {
             quantity: item.quantity,
             notes: item.notes || undefined,
           })),
+          customerName: customerName.trim(),
+          customerPhone: customerPhone.trim(),
           address,
+          addressNotes: addressNotes.trim() || undefined,
           lat: selectedLat,
           lng: selectedLng,
         }),
@@ -165,11 +170,14 @@ export default function HomePage() {
         JSON.stringify({
           orderId: data.orderId,
           items: cartItems,
+          customerName: customerName.trim(),
+          customerPhone: customerPhone.trim(),
           subtotal: data.subtotal,
           deliveryFee: data.deliveryFee,
           total: data.total,
           distanceKm: data.distanceKm,
           address,
+          addressNotes: addressNotes.trim(),
         })
       );
 
@@ -245,24 +253,78 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Delivery Section */}
-        <section className="space-y-4">
-          <h3 className="text-lg font-headline font-bold text-on-surface tracking-tight">Delivery Address</h3>
+        {/* Customer & Delivery Section */}
+        <section className="space-y-6">
+          <h3 className="text-lg font-headline font-bold text-on-surface tracking-tight">Detail Pengantaran</h3>
 
-          <AddressSearch value={address} onChange={handleAddressSelect} />
-
-          <div className="h-44 rounded-3xl overflow-hidden relative border border-outline-variant/20">
-            <DeliveryMap
-              onLocationSelect={handleMapSelect}
-              selectedLat={selectedLat}
-              selectedLng={selectedLng}
-            />
+          {/* Customer Name */}
+          <div className="space-y-2">
+            <label className="font-label text-xs uppercase tracking-widest text-on-surface-variant font-medium">Nama Pemesan *</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-primary text-lg">person</span>
+              <input
+                type="text"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                placeholder="Nama lengkap"
+                className="w-full pl-12 pr-4 py-4 bg-surface-container border-none rounded-2xl text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary shadow-inner"
+              />
+            </div>
           </div>
 
-          {distanceKm !== null && (
+          {/* Customer Phone */}
+          <div className="space-y-2">
+            <label className="font-label text-xs uppercase tracking-widest text-on-surface-variant font-medium">No. WhatsApp *</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-primary text-lg">phone</span>
+              <input
+                type="tel"
+                value={customerPhone}
+                onChange={(e) => setCustomerPhone(e.target.value)}
+                placeholder="08xxxxxxxxxx"
+                className="w-full pl-12 pr-4 py-4 bg-surface-container border-none rounded-2xl text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary shadow-inner"
+              />
+            </div>
+          </div>
+
+          {/* Address Search */}
+          <div className="space-y-2">
+            <label className="font-label text-xs uppercase tracking-widest text-on-surface-variant font-medium">Alamat Lengkap *</label>
+            <AddressSearch value={address} onChange={handleAddressSelect} />
+          </div>
+
+          {/* Address Notes */}
+          <div className="space-y-2">
+            <label className="font-label text-xs uppercase tracking-widest text-on-surface-variant font-medium">Catatan Alamat</label>
+            <div className="relative">
+              <span className="absolute left-4 top-4 material-symbols-outlined text-primary text-lg">edit_note</span>
+              <textarea
+                value={addressNotes}
+                onChange={(e) => setAddressNotes(e.target.value)}
+                placeholder="Contoh: Taro di pager, rumah cat hijau, lantai 2"
+                rows={2}
+                className="w-full pl-12 pr-4 py-4 bg-surface-container border-none rounded-2xl text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary shadow-inner resize-none"
+              />
+            </div>
+          </div>
+
+          {/* Map (Optional) */}
+          <div className="space-y-2">
+            <label className="font-label text-xs uppercase tracking-widest text-on-surface-variant font-medium">Titik Peta (Opsional)</label>
+            <div className="h-44 rounded-3xl overflow-hidden relative border border-outline-variant/20">
+              <DeliveryMap
+                onLocationSelect={handleMapSelect}
+                selectedLat={selectedLat}
+                selectedLng={selectedLng}
+              />
+            </div>
+          </div>
+
+          {/* Distance & Fee Info */}
+          {distanceKm !== null && distanceKm > 0 && (
             <div className="botanical-card rounded-xl p-5 flex items-center justify-between">
               <div>
-                <p className="text-xs text-on-surface-variant">Jarak</p>
+                <p className="text-xs text-on-surface-variant">Jarak (via jalan)</p>
                 <p className="font-headline font-bold text-lg text-on-surface">
                   {distanceKm} km
                 </p>

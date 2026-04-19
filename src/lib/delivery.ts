@@ -1,80 +1,37 @@
 import { HIMEAL_ORIGIN, DELIVERY_CONFIG } from "./constants";
 
+const ORS_API_KEY =
+  process.env.ORS_API_KEY ||
+  "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjZlYTBkZTFjMjI1OTRhMTI5NTMzMzRlMjFmMTE2YzhmIiwiaCI6Im11cm11cjY0In0=";
+
 /**
- * Calculate road distance using multiple routing providers.
- * Tries OSRM first, then OpenRouteService, then GraphHopper.
- * Throws if ALL providers fail - no Haversine fallback.
+ * Calculate road distance using OpenRouteService.
+ * No fallback - throws on failure.
  */
 export async function calculateRoadDistance(
   customerLat: number,
   customerLng: number
 ): Promise<number> {
-  const osrmResult = await tryOSRM(customerLat, customerLng);
-  if (osrmResult !== null) return osrmResult;
+  const url = `https://api.openrouteservice.org/v2/directions/driving-car?start=${HIMEAL_ORIGIN.lng},${HIMEAL_ORIGIN.lat}&end=${customerLng},${customerLat}`;
+  const res = await fetch(url, {
+    headers: {
+      Accept: "application/json, application/geo+json",
+      Authorization: ORS_API_KEY,
+    },
+    signal: AbortSignal.timeout(10000),
+  });
 
-  const orsResult = await tryOpenRouteService(customerLat, customerLng);
-  if (orsResult !== null) return orsResult;
-
-  const ghResult = await tryGraphHopper(customerLat, customerLng);
-  if (ghResult !== null) return ghResult;
-
-  throw new Error(
-    "Tidak dapat menghitung jarak pengantaran. Coba lagi nanti."
-  );
-}
-
-async function tryOSRM(
-  customerLat: number,
-  customerLng: number
-): Promise<number | null> {
-  try {
-    const url = `https://router.project-osrm.org/route/v1/driving/${HIMEAL_ORIGIN.lng},${HIMEAL_ORIGIN.lat};${customerLng},${customerLat}?overview=false`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
-    const data = await res.json();
-    if (data.code === "Ok" && data.routes?.[0]) {
-      return data.routes[0].distance / 1000;
-    }
-  } catch {
-    // OSRM unavailable
+  if (!res.ok) {
+    throw new Error(`Gagal menghitung jarak: ${res.status}`);
   }
-  return null;
-}
 
-async function tryOpenRouteService(
-  customerLat: number,
-  customerLng: number
-): Promise<number | null> {
-  try {
-    const url = `https://api.openrouteservice.org/v2/directions/driving-car?start=${HIMEAL_ORIGIN.lng},${HIMEAL_ORIGIN.lat}&end=${customerLng},${customerLat}`;
-    const res = await fetch(url, {
-      headers: { Accept: "application/json, application/geo+json" },
-      signal: AbortSignal.timeout(8000),
-    });
-    const data = await res.json();
-    if (data.features?.[0]?.properties?.summary?.distance) {
-      return data.features[0].properties.summary.distance / 1000;
-    }
-  } catch {
-    // ORS unavailable
+  const data = await res.json();
+  const distance = data.features?.[0]?.properties?.summary?.distance;
+  if (typeof distance !== "number") {
+    throw new Error("Tidak dapat menghitung jarak pengantaran.");
   }
-  return null;
-}
 
-async function tryGraphHopper(
-  customerLat: number,
-  customerLng: number
-): Promise<number | null> {
-  try {
-    const url = `https://graphhopper.com/api/1/route?point=${HIMEAL_ORIGIN.lat},${HIMEAL_ORIGIN.lng}&point=${customerLat},${customerLng}&vehicle=car&calc_points=false&key=`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
-    const data = await res.json();
-    if (data.paths?.[0]?.distance) {
-      return data.paths[0].distance / 1000;
-    }
-  } catch {
-    // GraphHopper unavailable
-  }
-  return null;
+  return distance / 1000;
 }
 
 export function calculateDeliveryFee(distanceKm: number): number {

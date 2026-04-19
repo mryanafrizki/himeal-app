@@ -12,9 +12,12 @@ interface OrderItemInput {
 
 interface CreateOrderBody {
   items: OrderItemInput[];
+  customerName: string;
+  customerPhone: string;
   address: string;
-  lat: number;
-  lng: number;
+  addressNotes?: string;
+  lat?: number;
+  lng?: number;
 }
 
 export async function POST(request: NextRequest) {
@@ -23,21 +26,28 @@ export async function POST(request: NextRequest) {
 
     if (!body.items || !Array.isArray(body.items) || body.items.length === 0) {
       return NextResponse.json(
-        { error: "Items are required" },
+        { error: "Pilih minimal satu menu" },
+        { status: 400 }
+      );
+    }
+
+    if (!body.customerName || typeof body.customerName !== "string") {
+      return NextResponse.json(
+        { error: "Nama pemesan wajib diisi" },
+        { status: 400 }
+      );
+    }
+
+    if (!body.customerPhone || typeof body.customerPhone !== "string") {
+      return NextResponse.json(
+        { error: "Nomor WhatsApp wajib diisi" },
         { status: 400 }
       );
     }
 
     if (!body.address || typeof body.address !== "string") {
       return NextResponse.json(
-        { error: "Address is required" },
-        { status: 400 }
-      );
-    }
-
-    if (typeof body.lat !== "number" || typeof body.lng !== "number") {
-      return NextResponse.json(
-        { error: "Valid lat and lng are required" },
+        { error: "Alamat wajib diisi" },
         { status: 400 }
       );
     }
@@ -55,13 +65,13 @@ export async function POST(request: NextRequest) {
       const menuItem = MENU_ITEMS.find((m) => m.id === item.productId);
       if (!menuItem) {
         return NextResponse.json(
-          { error: `Invalid product: ${item.productId}` },
+          { error: `Produk tidak valid: ${item.productId}` },
           { status: 400 }
         );
       }
       if (!item.quantity || item.quantity < 1) {
         return NextResponse.json(
-          { error: `Invalid quantity for ${item.productId}` },
+          { error: `Jumlah tidak valid untuk ${menuItem.name}` },
           { status: 400 }
         );
       }
@@ -80,9 +90,25 @@ export async function POST(request: NextRequest) {
       0
     );
 
-    const distanceKm = await calculateRoadDistance(body.lat, body.lng);
-    const roundedDistance = Math.round(distanceKm * 100) / 100;
-    const deliveryFee = calculateDeliveryFee(distanceKm);
+    // Calculate distance if lat/lng provided
+    let distanceKm = 0;
+    let deliveryFee = 0;
+    const hasCoords =
+      typeof body.lat === "number" && typeof body.lng === "number";
+
+    if (hasCoords) {
+      try {
+        distanceKm = await calculateRoadDistance(body.lat!, body.lng!);
+        distanceKm = Math.round(distanceKm * 100) / 100;
+        deliveryFee = calculateDeliveryFee(distanceKm);
+      } catch {
+        return NextResponse.json(
+          { error: "Gagal menghitung jarak. Coba lagi." },
+          { status: 502 }
+        );
+      }
+    }
+
     const total = subtotal + deliveryFee;
 
     // Generate order
@@ -91,10 +117,13 @@ export async function POST(request: NextRequest) {
     const order = createOrder(
       {
         id: orderId,
+        customer_name: body.customerName.trim(),
+        customer_phone: body.customerPhone.trim(),
         customer_address: body.address,
-        customer_lat: body.lat,
-        customer_lng: body.lng,
-        distance_km: roundedDistance,
+        customer_lat: hasCoords ? body.lat! : null,
+        customer_lng: hasCoords ? body.lng! : null,
+        address_notes: body.addressNotes?.trim() || null,
+        distance_km: distanceKm,
         delivery_fee: deliveryFee,
         subtotal,
         total,
@@ -120,12 +149,12 @@ export async function POST(request: NextRequest) {
       subtotal,
       deliveryFee,
       total,
-      distanceKm: roundedDistance,
+      distanceKm,
     });
   } catch (error) {
     console.error("[POST /api/order]", error);
     return NextResponse.json(
-      { error: "Failed to create order" },
+      { error: "Gagal membuat pesanan" },
       { status: 500 }
     );
   }

@@ -18,9 +18,12 @@ export function getDb(): Database.Database {
     db.exec(`
       CREATE TABLE IF NOT EXISTS orders (
         id TEXT PRIMARY KEY,
+        customer_name TEXT NOT NULL DEFAULT '',
+        customer_phone TEXT NOT NULL DEFAULT '',
         customer_address TEXT NOT NULL,
-        customer_lat REAL NOT NULL,
-        customer_lng REAL NOT NULL,
+        customer_lat REAL,
+        customer_lng REAL,
+        address_notes TEXT,
         distance_km REAL NOT NULL,
         delivery_fee INTEGER NOT NULL,
         subtotal INTEGER NOT NULL,
@@ -56,9 +59,12 @@ export function getDb(): Database.Database {
 
 export interface OrderRow {
   id: string;
+  customer_name: string;
+  customer_phone: string;
   customer_address: string;
-  customer_lat: number;
-  customer_lng: number;
+  customer_lat: number | null;
+  customer_lng: number | null;
+  address_notes: string | null;
   distance_km: number;
   delivery_fee: number;
   subtotal: number;
@@ -91,8 +97,8 @@ export function createOrder(
   const db = getDb();
 
   const insertOrder = db.prepare(`
-    INSERT INTO orders (id, customer_address, customer_lat, customer_lng, distance_km, delivery_fee, subtotal, total, payment_id, payment_status, order_status, qr_string, notes, expires_at)
-    VALUES (@id, @customer_address, @customer_lat, @customer_lng, @distance_km, @delivery_fee, @subtotal, @total, @payment_id, @payment_status, @order_status, @qr_string, @notes, @expires_at)
+    INSERT INTO orders (id, customer_name, customer_phone, customer_address, customer_lat, customer_lng, address_notes, distance_km, delivery_fee, subtotal, total, payment_id, payment_status, order_status, qr_string, notes, expires_at)
+    VALUES (@id, @customer_name, @customer_phone, @customer_address, @customer_lat, @customer_lng, @address_notes, @distance_km, @delivery_fee, @subtotal, @total, @payment_id, @payment_status, @order_status, @qr_string, @notes, @expires_at)
   `);
 
   const insertItem = db.prepare(`

@@ -56,7 +56,10 @@ export async function POST(request: NextRequest) {
     // Send Telegram notification for new order
     const message = buildNewOrderMessage({
       orderId: body.orderId,
+      customerName: order.customer_name,
+      customerPhone: order.customer_phone,
       customerAddress: order.customer_address,
+      addressNotes: order.address_notes,
       items: order.items.map((item) => ({
         name: item.product_name,
         qty: item.quantity,
