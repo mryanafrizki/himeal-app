@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { MENU_ITEMS, formatCurrency, HIMEAL_MAPS_EMBED, type OrderType } from "@/lib/constants";
+import { MENU_ITEMS, formatCurrency, type OrderType } from "@/lib/constants";
 import {
   calculateRoadDistance,
   calculateDeliveryFee,
@@ -398,7 +398,7 @@ export default function HomePage() {
                   loading="lazy"
                   allowFullScreen
                   referrerPolicy="no-referrer-when-downgrade"
-                  src={`https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d1500!2d109.2237517!3d-7.434855!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sen!2sid!4v1`}
+                  src="https://maps.google.com/maps?q=-7.434855,109.2237517&z=17&output=embed"
                 />
               </div>
             </div>
