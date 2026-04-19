@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import { MENU_ITEMS } from "@/lib/constants";
-import { getDeliveryInfo } from "@/lib/delivery";
+import { calculateRoadDistance, calculateDeliveryFee } from "@/lib/delivery";
 import { createOrder } from "@/lib/db";
 
 interface OrderItemInput {
@@ -80,8 +80,9 @@ export async function POST(request: NextRequest) {
       0
     );
 
-    const deliveryInfo = getDeliveryInfo(body.lat, body.lng);
-    const deliveryFee = deliveryInfo.fee;
+    const distanceKm = await calculateRoadDistance(body.lat, body.lng);
+    const roundedDistance = Math.round(distanceKm * 100) / 100;
+    const deliveryFee = calculateDeliveryFee(distanceKm);
     const total = subtotal + deliveryFee;
 
     // Generate order
@@ -93,7 +94,7 @@ export async function POST(request: NextRequest) {
         customer_address: body.address,
         customer_lat: body.lat,
         customer_lng: body.lng,
-        distance_km: deliveryInfo.distanceKm,
+        distance_km: roundedDistance,
         delivery_fee: deliveryFee,
         subtotal,
         total,
@@ -119,7 +120,7 @@ export async function POST(request: NextRequest) {
       subtotal,
       deliveryFee,
       total,
-      distanceKm: deliveryInfo.distanceKm,
+      distanceKm: roundedDistance,
     });
   } catch (error) {
     console.error("[POST /api/order]", error);

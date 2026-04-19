@@ -1,5 +1,31 @@
 import { HIMEAL_ORIGIN, DELIVERY_CONFIG } from "./constants";
 
+/**
+ * Calculate road distance using OSRM (free, no API key).
+ * Falls back to Haversine if OSRM fails.
+ */
+export async function calculateRoadDistance(
+  customerLat: number,
+  customerLng: number
+): Promise<number> {
+  try {
+    const url = `https://router.project-osrm.org/route/v1/driving/${HIMEAL_ORIGIN.lng},${HIMEAL_ORIGIN.lat};${customerLng},${customerLat}?overview=false`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.code === "Ok" && data.routes?.[0]) {
+      return data.routes[0].distance / 1000; // meters to km
+    }
+  } catch {
+    // Fall back to haversine
+  }
+  return haversineDistance(
+    HIMEAL_ORIGIN.lat,
+    HIMEAL_ORIGIN.lng,
+    customerLat,
+    customerLng
+  );
+}
+
 export function haversineDistance(
   lat1: number,
   lon1: number,
@@ -18,18 +44,6 @@ export function haversineDistance(
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-export function calculateDistanceFromHiMeal(
-  customerLat: number,
-  customerLng: number
-): number {
-  return haversineDistance(
-    HIMEAL_ORIGIN.lat,
-    HIMEAL_ORIGIN.lng,
-    customerLat,
-    customerLng
-  );
-}
-
 export function calculateDeliveryFee(distanceKm: number): number {
   if (distanceKm <= DELIVERY_CONFIG.freeDistanceKm) {
     return 0;
@@ -37,14 +51,4 @@ export function calculateDeliveryFee(distanceKm: number): number {
   const extraKm = distanceKm - DELIVERY_CONFIG.freeDistanceKm;
   const tiers = Math.ceil(extraKm / DELIVERY_CONFIG.tierDistanceKm);
   return tiers * DELIVERY_CONFIG.feePerTierIDR;
-}
-
-export function getDeliveryInfo(customerLat: number, customerLng: number) {
-  const distanceKm = calculateDistanceFromHiMeal(customerLat, customerLng);
-  const fee = calculateDeliveryFee(distanceKm);
-  return {
-    distanceKm: Math.round(distanceKm * 100) / 100,
-    fee,
-    isFree: fee === 0,
-  };
 }

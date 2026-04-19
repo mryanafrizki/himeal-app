@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { MENU_ITEMS, formatCurrency } from "@/lib/constants";
 import {
-  calculateDistanceFromHiMeal,
+  calculateRoadDistance,
   calculateDeliveryFee,
 } from "@/lib/delivery";
 import MenuCard from "@/components/MenuCard";
@@ -71,11 +71,11 @@ export default function HomePage() {
   }, []);
 
   const handleAddressSelect = useCallback(
-    (addr: string, lat: number, lng: number) => {
+    async (addr: string, lat: number, lng: number) => {
       setAddress(addr);
       setSelectedLat(lat);
       setSelectedLng(lng);
-      const dist = calculateDistanceFromHiMeal(lat, lng);
+      const dist = await calculateRoadDistance(lat, lng);
       const fee = calculateDeliveryFee(dist);
       setDistanceKm(Math.round(dist * 100) / 100);
       setDeliveryFee(fee);
@@ -86,7 +86,7 @@ export default function HomePage() {
   const handleMapSelect = useCallback(async (lat: number, lng: number) => {
     setSelectedLat(lat);
     setSelectedLng(lng);
-    const dist = calculateDistanceFromHiMeal(lat, lng);
+    const dist = await calculateRoadDistance(lat, lng);
     const fee = calculateDeliveryFee(dist);
     setDistanceKm(Math.round(dist * 100) / 100);
     setDeliveryFee(fee);
