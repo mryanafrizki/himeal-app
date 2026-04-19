@@ -37,7 +37,7 @@ export async function createQRIS(
   body.append("reff_id", reffId);
   body.append("nominal", nominal.toString());
   body.append("type", "ewallet");
-  body.append("metode", "qrisfast");
+  body.append("metode", "qris");
 
   const response = await fetch(`${ATLANTIC_BASE_URL}deposit/create`, {
     method: "POST",
