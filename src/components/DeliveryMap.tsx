@@ -46,17 +46,21 @@ export default function DeliveryMap({
   const hasLocation = selectedLat !== undefined && selectedLng !== undefined;
 
   const handlePasteLink = useCallback(async () => {
-    const trimmed = linkInput.trim();
-    if (!trimmed) {
+    const raw = linkInput.trim();
+    if (!raw) {
       setLinkError("Tempel link Google Maps");
       return;
     }
 
+    // Extract URL from text (mobile share might include extra text like "Check out this place: https://...")
+    const urlMatch = raw.match(/(https?:\/\/[^\s]+)/);
+    const url = urlMatch ? urlMatch[1] : raw;
+
     const isGoogleMaps =
-      trimmed.includes("google.com/maps") ||
-      trimmed.includes("maps.app.goo.gl") ||
-      trimmed.includes("goo.gl/maps") ||
-      trimmed.includes("maps.google.com");
+      url.includes("google.com/maps") ||
+      url.includes("maps.app.goo.gl") ||
+      url.includes("goo.gl/maps") ||
+      url.includes("maps.google.com");
 
     if (!isGoogleMaps) {
       setLinkError("Link tidak valid. Pastikan dari Google Maps.");
@@ -64,50 +68,45 @@ export default function DeliveryMap({
     }
 
     setLinkError(null);
+    setLinkLoading(true);
 
-    // Try extract coords directly from URL
-    const directCoords = extractCoordsFromUrl(trimmed);
-    if (directCoords) {
-      onLocationSelect(directCoords.lat, directCoords.lng);
-      setShowMap(true);
-      return;
-    }
-
-    // Short link - resolve via server
-    if (isShortLink(trimmed)) {
-      setLinkLoading(true);
-      try {
-        const res = await fetch("/api/maps/resolve", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: trimmed }),
-        });
-        const data = await res.json();
-
-        if (data.coords) {
-          onLocationSelect(data.coords.lat, data.coords.lng);
-          setShowMap(true);
-        } else if (data.finalUrl) {
-          // Try extract from resolved URL
-          const resolved = extractCoordsFromUrl(data.finalUrl);
-          if (resolved) {
-            onLocationSelect(resolved.lat, resolved.lng);
-            setShowMap(true);
-          } else {
-            setLinkError("Tidak dapat membaca koordinat dari link. Coba link yang lebih spesifik (klik lokasi di Google Maps lalu share).");
-          }
-        } else {
-          setLinkError("Gagal memproses link. Coba lagi.");
-        }
-      } catch {
-        setLinkError("Gagal memproses link. Coba lagi.");
-      } finally {
+    try {
+      // Try extract coords directly from URL first
+      const directCoords = extractCoordsFromUrl(url);
+      if (directCoords) {
+        onLocationSelect(directCoords.lat, directCoords.lng);
+        setShowMap(true);
         setLinkLoading(false);
+        return;
       }
-      return;
-    }
 
-    setLinkError("Tidak dapat membaca koordinat dari link ini.");
+      // Short link or no coords in URL - resolve via server
+      const res = await fetch("/api/maps/resolve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+
+      if (data.coords) {
+        onLocationSelect(data.coords.lat, data.coords.lng);
+        setShowMap(true);
+      } else if (data.finalUrl) {
+        const resolved = extractCoordsFromUrl(data.finalUrl);
+        if (resolved) {
+          onLocationSelect(resolved.lat, resolved.lng);
+          setShowMap(true);
+        } else {
+          setLinkError("Tidak dapat membaca koordinat. Coba klik lokasi spesifik di Google Maps lalu share.");
+        }
+      } else {
+        setLinkError("Gagal memproses link. Coba lagi.");
+      }
+    } catch {
+      setLinkError("Gagal memproses link. Periksa koneksi internet.");
+    } finally {
+      setLinkLoading(false);
+    }
   }, [linkInput, onLocationSelect]);
 
   const handleGPS = useCallback(() => {
@@ -203,6 +202,27 @@ export default function DeliveryMap({
                   Buka <span className="font-semibold text-on-surface">Google Maps</span> &rarr; cari/pilih lokasi kamu &rarr; tekan <span className="font-semibold text-primary">Bagikan</span> &rarr; <span className="font-semibold text-primary">Salin Link</span> &rarr; tempel di bawah.
                 </p>
               </div>
+
+              {/* Paste from clipboard button - easier on mobile */}
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const text = await navigator.clipboard.readText();
+                    if (text) {
+                      setLinkInput(text.trim());
+                      setLinkError(null);
+                    }
+                  } catch {
+                    // Clipboard API not available, user can paste manually
+                  }
+                }}
+                className="w-full flex items-center justify-center gap-2 py-3 bg-surface-container-high rounded-xl text-xs font-semibold text-on-surface-variant hover:text-on-surface transition-colors active:scale-[0.98]"
+              >
+                <span className="material-symbols-outlined text-base">content_paste</span>
+                Tempel dari Clipboard
+              </button>
+
               <div className="flex gap-2">
                 <input
                   type="text"
