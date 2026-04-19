@@ -1,8 +1,8 @@
 FROM node:20-alpine AS base
-
-# Install dependencies for better-sqlite3 native build
-FROM base AS deps
 RUN apk add --no-cache python3 make g++
+
+# Install dependencies
+FROM base AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -17,7 +17,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
 # Production runner
-FROM base AS runner
+FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
