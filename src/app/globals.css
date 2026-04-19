@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+:root {
+  --background: #10150f;
+  --foreground: #dfe4db;
+  --card: #1c211b;
+  --card-foreground: #dfe4db;
+  --card-elevated: #262b25;
+  --primary: #9dd3aa;
+  --primary-container: #4a7c59;
+  --primary-foreground: #01391c;
+  --secondary: #bccbb9;
+  --secondary-container: #3f4c3f;
+  --secondary-foreground: #273427;
+  --muted: #181d17;
+  --muted-foreground: #8b938a;
+  --border: #414942;
+  --surface: #10150f;
+  --surface-container: #1c211b;
+  --surface-container-high: #262b25;
+  --surface-container-highest: #313630;
+  --surface-container-low: #181d17;
+  --surface-bright: #353b34;
+  --destructive: #ffb4ab;
+  --success: #9dd3aa;
+  --warning: #ffb2bc;
+  --outline: #8b938a;
+  --outline-variant: #414942;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-card-elevated: var(--card-elevated);
+  --color-primary: var(--primary);
+  --color-primary-container: var(--primary-container);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-container: var(--secondary-container);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-surface: var(--surface);
+  --color-surface-container: var(--surface-container);
+  --color-surface-high: var(--surface-container-high);
+  --color-surface-highest: var(--surface-container-highest);
+  --color-surface-low: var(--surface-container-low);
+  --color-surface-bright: var(--surface-bright);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-outline: var(--outline);
+  --color-outline-variant: var(--outline-variant);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--outline-variant) transparent;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+input,
+textarea,
+select {
+  background: var(--surface-container-highest);
+  border: none;
+  border-bottom: 2px solid var(--outline-variant);
+  color: var(--foreground);
+  border-radius: 0.5rem 0.5rem 0 0;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.2s;
+  width: 100%;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-bottom-color: var(--primary);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--muted-foreground);
+}
+
+.leaflet-container {
+  background: var(--card) !important;
+  border-radius: 0.75rem;
+}
+
+.leaflet-control-zoom a {
+  background: var(--surface-container-high) !important;
+  color: var(--foreground) !important;
+  border-color: var(--outline-variant) !important;
+}
+
+.leaflet-control-attribution {
+  background: rgba(28, 33, 27, 0.8) !important;
+  color: var(--muted-foreground) !important;
+  font-size: 0.625rem !important;
+}
+
+.leaflet-control-attribution a {
+  color: var(--primary) !important;
+}
