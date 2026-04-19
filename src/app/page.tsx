@@ -204,7 +204,7 @@ export default function HomePage() {
     <>
       {/* Top Navigation Shell */}
       <header className="sticky top-0 z-50 bg-[#10150f]/80 backdrop-blur-xl border-none">
-        <div className="flex justify-between items-center w-full px-8 py-6 max-w-screen-2xl mx-auto">
+        <div className="flex justify-between items-center w-full px-6 lg:px-8 py-6 max-w-5xl mx-auto">
           <div className="flex flex-col">
             <span className="text-3xl font-black text-[#9dd3aa] tracking-[-0.04em] font-['Manrope'] uppercase">HI MEAL!</span>
             <span className="font-['Inter'] text-[10px] tracking-[0.2em] uppercase text-on-surface-variant font-medium">Good food, good mood</span>
@@ -217,7 +217,7 @@ export default function HomePage() {
         </div>
       </header>
 
-      <main className="px-6 space-y-10 pb-32">
+      <main className="px-6 lg:px-8 space-y-10 pb-32 max-w-5xl mx-auto">
         {/* Hero Section */}
         <section className="mt-4">
           <div className="relative h-48 w-full rounded-3xl overflow-hidden bg-surface-container">
@@ -229,6 +229,9 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+
+        {/* Content Grid - 2 cols on desktop */}
+        <div className="lg:grid lg:grid-cols-2 lg:gap-12 space-y-10 lg:space-y-0">
 
         {/* Menu Section */}
         <section className="space-y-6">
@@ -254,7 +257,7 @@ export default function HomePage() {
         </section>
 
         {/* Customer & Delivery Section */}
-        <section className="space-y-6">
+        <section className="space-y-6 lg:sticky lg:top-24 lg:self-start">
           <h3 className="text-lg font-headline font-bold text-on-surface tracking-tight">Detail Pengantaran</h3>
 
           {/* Customer Name */}
@@ -340,6 +343,8 @@ export default function HomePage() {
             </div>
           )}
         </section>
+
+        </div>{/* end grid */}
       </main>
 
       {/* Footer Shell */}

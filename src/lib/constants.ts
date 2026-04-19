@@ -21,7 +21,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 20000,
     description:
       "Fresh mixed greens topped with tender grilled chicken breast, cherry tomatoes, and our signature dressing.",
-    image: "/menu/salad.jpg",
+    image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&h=400&fit=crop&q=80",
   },
   {
     id: "grilled-chicken-kebab",
@@ -29,7 +29,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 16000,
     description:
       "Juicy grilled chicken skewers wrapped in warm flatbread with fresh vegetables and garlic sauce.",
-    image: "/menu/kebab.jpg",
+    image: "https://images.unsplash.com/photo-1529006557810-274b9b2fc783?w=600&h=400&fit=crop&q=80",
   },
 ];
 
