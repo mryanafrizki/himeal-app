@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
-import { MENU_ITEMS } from "@/lib/constants";
 import { calculateRoadDistance, calculateDeliveryFee } from "@/lib/delivery";
-import { createOrder } from "@/lib/db";
+import { createOrder, getActiveProducts } from "@/lib/db";
 
 interface OrderItemInput {
   productId: string;
@@ -52,7 +51,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate items against menu
+    // Validate items against DB products
+    const activeProducts = getActiveProducts();
     const validatedItems: Array<{
       productId: string;
       productName: string;
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     }> = [];
 
     for (const item of body.items) {
-      const menuItem = MENU_ITEMS.find((m) => m.id === item.productId);
+      const menuItem = activeProducts.find((m) => m.id === item.productId);
       if (!menuItem) {
         return NextResponse.json(
           { error: `Produk tidak valid: ${item.productId}` },

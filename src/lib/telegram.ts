@@ -1,12 +1,16 @@
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || "";
 
-function escapeHtml(text: string): string {
+function esc(text: string): string {
   return String(text || "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+function fmtRp(amount: number): string {
+  return `Rp ${amount.toLocaleString("id-ID")}`;
 }
 
 export async function sendTelegramNotification(
@@ -26,7 +30,7 @@ export async function sendTelegramNotification(
         chat_id: TELEGRAM_CHAT_ID,
         text: message,
         parse_mode: "HTML",
-        disable_web_page_preview: true,
+        disable_web_page_preview: false,
       }),
     });
   } catch (err) {
@@ -36,13 +40,14 @@ export async function sendTelegramNotification(
 
 export interface OrderNotificationData {
   orderId: string;
+  orderType: string;
   customerName: string;
   customerPhone: string;
   customerAddress: string;
   addressNotes?: string | null;
   customerLat?: number | null;
   customerLng?: number | null;
-  items: Array<{ name: string; qty: number; price: number }>;
+  items: Array<{ name: string; qty: number; price: number; notes?: string | null }>;
   subtotal: number;
   deliveryFee: number;
   total: number;
@@ -50,58 +55,94 @@ export interface OrderNotificationData {
 }
 
 export function buildNewOrderMessage(data: OrderNotificationData): string {
+  const isDelivery = data.orderType !== "takeaway";
+  const typeLabel = isDelivery ? "DELIVERY" : "TAKEAWAY";
+  const typeIcon = isDelivery ? "🛵" : "🏪"; // only in telegram, not in web UI
+
   const itemLines = data.items
-    .map(
-      (i) =>
-        `  - ${escapeHtml(i.name)} x${i.qty} = Rp ${(i.price * i.qty).toLocaleString("id-ID")}`
-    )
+    .map((i) => {
+      let line = `    ${esc(i.name)}  x${i.qty}  <b>${fmtRp(i.price * i.qty)}</b>`;
+      if (i.notes) line += `\n    <i>    "${esc(i.notes)}"</i>`;
+      return line;
+    })
     .join("\n");
 
-  let msg = `<b>PESANAN BARU</b>
+  let msg = `${typeIcon} <b>PESANAN BARU - ${typeLabel}</b>
+━━━━━━━━━━━━━━━━━━━━
 
-<b>Order:</b> <code>${escapeHtml(data.orderId)}</code>
-<b>Nama:</b> ${escapeHtml(data.customerName)}
-<b>WA:</b> ${escapeHtml(data.customerPhone)}
-<b>Alamat:</b> ${escapeHtml(data.customerAddress)}`;
+<b>ID Pesanan</b>
+<code>${esc(data.orderId)}</code>
+
+👤 <b>PEMESAN</b>
+    Nama: <b>${esc(data.customerName)}</b>
+    WA: <b>${esc(data.customerPhone)}</b>
+
+📍 <b>PENGANTARAN</b>
+    ${esc(data.customerAddress)}`;
 
   if (data.addressNotes) {
-    msg += `\n<b>Catatan alamat:</b> ${escapeHtml(data.addressNotes)}`;
+    msg += `\n    <i>"${esc(data.addressNotes)}"</i>`;
   }
 
   if (data.customerLat && data.customerLng) {
-    msg += `\n<b>Maps:</b> <a href="https://maps.google.com/maps?q=${data.customerLat},${data.customerLng}">Buka di Google Maps</a>`;
+    msg += `\n    <a href="https://maps.google.com/maps?q=${data.customerLat},${data.customerLng}">📌 Buka Google Maps</a>`;
   }
 
-  msg += `\n<b>Jarak:</b> ${data.distanceKm > 0 ? data.distanceKm + " km" : "Belum ditentukan"}
+  if (isDelivery && data.distanceKm > 0) {
+    msg += `\n    Jarak: <b>${data.distanceKm} km</b>`;
+  }
 
-<b>Items:</b>
+  msg += `
+
+🍽 <b>PESANAN</b>
 ${itemLines}
 
-<b>Subtotal:</b> Rp ${data.subtotal.toLocaleString("id-ID")}
-<b>Ongkir:</b> Rp ${data.deliveryFee.toLocaleString("id-ID")}
-<b>Total:</b> <b>Rp ${data.total.toLocaleString("id-ID")}</b>`;
+━━━━━━━━━━━━━━━━━━━━
+    Subtotal:     ${fmtRp(data.subtotal)}
+    Ongkir:         ${data.deliveryFee === 0 ? "<b>GRATIS</b>" : fmtRp(data.deliveryFee)}
+━━━━━━━━━━━━━━━━━━━━
+    <b>TOTAL:        ${fmtRp(data.total)}</b>`;
 
   return msg;
 }
 
 export function buildPaymentConfirmedMessage(
   orderId: string,
-  total: number
+  total: number,
+  customerName: string
 ): string {
-  return `<b>PEMBAYARAN BERHASIL</b>
+  return `✅ <b>PEMBAYARAN BERHASIL</b>
+━━━━━━━━━━━━━━━━━━━━
 
-<b>Order:</b> <code>${escapeHtml(orderId)}</code>
-<b>Total:</b> Rp ${total.toLocaleString("id-ID")}
+<b>ID Pesanan</b>
+<code>${esc(orderId)}</code>
 
-Segera proses pesanan ini.`;
+Pelanggan: <b>${esc(customerName)}</b>
+Total: <b>${fmtRp(total)}</b>
+
+⚡ <b>Segera proses pesanan ini!</b>`;
 }
 
 export function buildStatusChangeMessage(
   orderId: string,
-  newStatus: string
+  newStatus: string,
+  customerName: string
 ): string {
-  return `<b>STATUS UPDATE</b>
+  const statusIcons: Record<string, string> = {
+    confirmed: "✅",
+    preparing: "👨‍🍳",
+    delivering: "🛵",
+    delivered: "🎉",
+    cancelled: "❌",
+  };
+  const icon = statusIcons[newStatus] || "📋";
 
-<b>Order:</b> <code>${escapeHtml(orderId)}</code>
-<b>Status:</b> <b>${escapeHtml(newStatus)}</b>`;
+  return `${icon} <b>STATUS UPDATE</b>
+━━━━━━━━━━━━━━━━━━━━
+
+<b>ID Pesanan</b>
+<code>${esc(orderId)}</code>
+
+Pelanggan: <b>${esc(customerName)}</b>
+Status: <b>${esc(newStatus.toUpperCase())}</b>`;
 }

@@ -49,7 +49,7 @@ export async function GET(
       updateOrderPaymentStatus(id, "success", "confirmed");
 
       // Send Telegram notification
-      const message = buildPaymentConfirmedMessage(id, order.total);
+      const message = buildPaymentConfirmedMessage(id, order.total, order.customer_name);
       await sendTelegramNotification(message);
 
       return NextResponse.json({

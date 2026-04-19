@@ -49,10 +49,24 @@ export function getDb(): Database.Database {
         notes TEXT
       );
 
+      CREATE TABLE IF NOT EXISTS products (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        price INTEGER NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        image TEXT NOT NULL DEFAULT '',
+        is_active INTEGER NOT NULL DEFAULT 1,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+      );
+
       CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(order_status);
       CREATE INDEX IF NOT EXISTS idx_orders_payment ON orders(payment_status);
       CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);
+      CREATE INDEX IF NOT EXISTS idx_products_active ON products(is_active, sort_order);
     `);
+
+    seedDefaultProducts();
   }
   return db;
 }
@@ -189,4 +203,139 @@ export function getOrderQueue(orderId: string): number {
     )
     .get(orderId, orderId) as { position: number };
   return result.position;
+}
+
+// ─── Products ────────────────────────────────────────────────────────
+
+export interface ProductRow {
+  id: string;
+  name: string;
+  price: number;
+  description: string;
+  image: string;
+  is_active: number;
+  sort_order: number;
+  created_at: string;
+}
+
+export function getActiveProducts(): ProductRow[] {
+  const db = getDb();
+  return db
+    .prepare("SELECT * FROM products WHERE is_active = 1 ORDER BY sort_order ASC, created_at ASC")
+    .all() as ProductRow[];
+}
+
+export function getAllProducts(): ProductRow[] {
+  const db = getDb();
+  return db
+    .prepare("SELECT * FROM products ORDER BY sort_order ASC, created_at ASC")
+    .all() as ProductRow[];
+}
+
+export function getProduct(id: string): ProductRow | null {
+  const db = getDb();
+  const row = db.prepare("SELECT * FROM products WHERE id = ?").get(id) as ProductRow | undefined;
+  return row ?? null;
+}
+
+export function createProduct(product: {
+  id: string;
+  name: string;
+  price: number;
+  description: string;
+  image: string;
+  sort_order?: number;
+}): ProductRow {
+  const db = getDb();
+  const maxOrder = db
+    .prepare("SELECT COALESCE(MAX(sort_order), 0) as max_order FROM products")
+    .get() as { max_order: number };
+
+  db.prepare(
+    `INSERT INTO products (id, name, price, description, image, sort_order)
+     VALUES (@id, @name, @price, @description, @image, @sort_order)`
+  ).run({
+    ...product,
+    sort_order: product.sort_order ?? maxOrder.max_order + 1,
+  });
+
+  return getProduct(product.id)!;
+}
+
+export function updateProduct(
+  id: string,
+  fields: Partial<Pick<ProductRow, "name" | "price" | "description" | "image" | "is_active" | "sort_order">>
+): ProductRow | null {
+  const db = getDb();
+  const existing = getProduct(id);
+  if (!existing) return null;
+
+  const updates: string[] = [];
+  const values: Record<string, unknown> = { id };
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (value !== undefined) {
+      updates.push(`${key} = @${key}`);
+      values[key] = value;
+    }
+  }
+
+  if (updates.length === 0) return existing;
+
+  db.prepare(`UPDATE products SET ${updates.join(", ")} WHERE id = @id`).run(values);
+  return getProduct(id);
+}
+
+export function deleteProduct(id: string): boolean {
+  const db = getDb();
+  const result = db.prepare("DELETE FROM products WHERE id = ?").run(id);
+  return result.changes > 0;
+}
+
+function seedDefaultProducts(): void {
+  const db = getDb();
+  const count = db.prepare("SELECT COUNT(*) as count FROM products").get() as { count: number };
+  if (count.count > 0) return;
+
+  const insert = db.prepare(
+    `INSERT INTO products (id, name, price, description, image, sort_order)
+     VALUES (@id, @name, @price, @description, @image, @sort_order)`
+  );
+
+  const transaction = db.transaction(() => {
+    insert.run({
+      id: "grilled-chicken-salad",
+      name: "Grilled Chicken Salad",
+      price: 20000,
+      description: "Fresh mixed greens topped with tender grilled chicken breast, cherry tomatoes, and our signature dressing.",
+      image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&h=400&fit=crop&q=80",
+      sort_order: 1,
+    });
+    insert.run({
+      id: "grilled-chicken-kebab",
+      name: "Grilled Chicken Kebab",
+      price: 16000,
+      description: "Juicy grilled chicken skewers wrapped in warm flatbread with fresh vegetables and garlic sauce.",
+      image: "https://images.unsplash.com/photo-1529006557810-274b9b2fc783?w=600&h=400&fit=crop&q=80",
+      sort_order: 2,
+    });
+  });
+
+  transaction();
+}
+
+// ─── Orders (admin) ──────────────────────────────────────────────────
+
+export function getAllOrders(): (OrderRow & { items: OrderItemRow[] })[] {
+  const db = getDb();
+  const orders = db
+    .prepare("SELECT * FROM orders ORDER BY created_at DESC")
+    .all() as OrderRow[];
+
+  return orders.map((order) => {
+    const items = db
+      .prepare("SELECT * FROM order_items WHERE order_id = ?")
+      .all(order.id) as OrderItemRow[];
+    return { ...order, items };
+  });
 }

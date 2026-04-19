@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { MENU_ITEMS, formatCurrency, type OrderType } from "@/lib/constants";
+import { formatCurrency, type OrderType, type MenuItem } from "@/lib/constants";
 import {
   calculateRoadDistance,
   calculateDeliveryFee,
@@ -23,6 +23,9 @@ interface CartItem {
 
 export default function HomePage() {
   const router = useRouter();
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [menuLoading, setMenuLoading] = useState(true);
+  const menuItemsRef = useRef<MenuItem[]>([]);
   const [cart, setCart] = useState<Record<string, CartItem>>({});
   const [orderType, setOrderType] = useState<OrderType>("delivery");
   const [customerName, setCustomerName] = useState("");
@@ -35,9 +38,20 @@ export default function HomePage() {
   const [deliveryFee, setDeliveryFee] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    fetch("/api/products")
+      .then((res) => res.json())
+      .then((data: MenuItem[]) => {
+        setMenuItems(data);
+        menuItemsRef.current = data;
+      })
+      .catch(() => toast.error("Gagal memuat menu"))
+      .finally(() => setMenuLoading(false));
+  }, []);
+
   const updateQuantity = useCallback((productId: string, quantity: number) => {
     setCart((prev) => {
-      const item = MENU_ITEMS.find((m) => m.id === productId);
+      const item = menuItemsRef.current.find((m) => m.id === productId);
       if (!item) return prev;
       if (quantity <= 0) {
         const next = { ...prev };
@@ -226,16 +240,31 @@ export default function HomePage() {
             <span className="text-xs font-label uppercase tracking-widest text-on-secondary-container bg-secondary-container px-3 py-1 rounded-full">{dayName}</span>
           </div>
           <div className="grid gap-6">
-            {MENU_ITEMS.map((item) => (
-              <MenuCard
-                key={item.id}
-                item={item}
-                quantity={cart[item.id]?.quantity || 0}
-                notes={cart[item.id]?.notes || ""}
-                onQuantityChange={(qty) => updateQuantity(item.id, qty)}
-                onNotesChange={(notes) => updateNotes(item.id, notes)}
-              />
-            ))}
+            {menuLoading ? (
+              <>
+                {[1, 2].map((i) => (
+                  <div key={i} className="bg-[#111a11] border border-[#4a7c59]/30 rounded-[2rem] p-5 space-y-4 animate-pulse">
+                    <div className="h-40 rounded-2xl bg-surface-container-highest" />
+                    <div className="space-y-2">
+                      <div className="h-6 bg-surface-container-highest rounded-lg w-3/4" />
+                      <div className="h-4 bg-surface-container-highest rounded-lg w-full" />
+                    </div>
+                    <div className="h-10 bg-surface-container-highest rounded-full w-1/2" />
+                  </div>
+                ))}
+              </>
+            ) : (
+              menuItems.map((item) => (
+                <MenuCard
+                  key={item.id}
+                  item={item}
+                  quantity={cart[item.id]?.quantity || 0}
+                  notes={cart[item.id]?.notes || ""}
+                  onQuantityChange={(qty) => updateQuantity(item.id, qty)}
+                  onNotesChange={(notes) => updateNotes(item.id, notes)}
+                />
+              ))
+            )}
           </div>
         </section>
 

@@ -50,7 +50,7 @@ export async function PATCH(
     updateOrderStatus(id, body.status);
 
     // Send Telegram notification
-    const message = buildStatusChangeMessage(id, body.status);
+    const message = buildStatusChangeMessage(id, body.status, order.customer_name);
     await sendTelegramNotification(message);
 
     return NextResponse.json({ success: true, orderId: id, status: body.status });

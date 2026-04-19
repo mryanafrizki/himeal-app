@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
     // Send Telegram notification for new order
     const message = buildNewOrderMessage({
       orderId: body.orderId,
+      orderType: order.customer_address.startsWith("Takeaway") ? "takeaway" : "delivery",
       customerName: order.customer_name,
       customerPhone: order.customer_phone,
       customerAddress: order.customer_address,
@@ -66,6 +67,7 @@ export async function POST(request: NextRequest) {
         name: item.product_name,
         qty: item.quantity,
         price: item.price,
+        notes: item.notes,
       })),
       subtotal: order.subtotal,
       deliveryFee: order.delivery_fee,
