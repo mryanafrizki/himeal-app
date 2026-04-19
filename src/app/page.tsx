@@ -75,10 +75,16 @@ export default function HomePage() {
       setAddress(addr);
       setSelectedLat(lat);
       setSelectedLng(lng);
-      const dist = await calculateRoadDistance(lat, lng);
-      const fee = calculateDeliveryFee(dist);
-      setDistanceKm(Math.round(dist * 100) / 100);
-      setDeliveryFee(fee);
+      try {
+        const dist = await calculateRoadDistance(lat, lng);
+        const fee = calculateDeliveryFee(dist);
+        setDistanceKm(Math.round(dist * 100) / 100);
+        setDeliveryFee(fee);
+      } catch {
+        toast.error("Gagal menghitung jarak. Coba lagi.");
+        setDistanceKm(null);
+        setDeliveryFee(0);
+      }
     },
     []
   );
@@ -86,10 +92,16 @@ export default function HomePage() {
   const handleMapSelect = useCallback(async (lat: number, lng: number) => {
     setSelectedLat(lat);
     setSelectedLng(lng);
-    const dist = await calculateRoadDistance(lat, lng);
-    const fee = calculateDeliveryFee(dist);
-    setDistanceKm(Math.round(dist * 100) / 100);
-    setDeliveryFee(fee);
+    try {
+      const dist = await calculateRoadDistance(lat, lng);
+      const fee = calculateDeliveryFee(dist);
+      setDistanceKm(Math.round(dist * 100) / 100);
+      setDeliveryFee(fee);
+    } catch {
+      toast.error("Gagal menghitung jarak. Coba lagi.");
+      setDistanceKm(null);
+      setDeliveryFee(0);
+    }
 
     try {
       const res = await fetch(
