@@ -1,6 +1,6 @@
 export const HIMEAL_ORIGIN = {
-  lat: -7.4316,
-  lng: 109.2349,
+  lat: -7.434855,
+  lng: 109.2237517,
 } as const;
 
 export const WHATSAPP_NUMBER = "6287777527426";

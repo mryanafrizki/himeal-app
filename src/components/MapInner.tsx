@@ -21,7 +21,7 @@ L.Icon.Default.mergeOptions({
     "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
 
-const HIMEAL_ORIGIN: [number, number] = [-7.4316, 109.2349];
+const HIMEAL_ORIGIN: [number, number] = [-7.434855, 109.2237517];
 
 const originIcon = new L.Icon({
   iconUrl:

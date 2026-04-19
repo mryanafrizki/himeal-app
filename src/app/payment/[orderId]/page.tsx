@@ -163,18 +163,18 @@ export default function PaymentPage() {
 
   return (
     <main className="min-h-screen pb-8">
-      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-outline-variant/15">
-        <div className="max-w-lg mx-auto px-4 py-4">
-          <h1 className="text-lg font-bold tracking-tight text-center">
+      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-2xl border-b border-[#4a7c59]/10">
+        <div className="max-w-lg mx-auto px-5 py-4">
+          <h1 className="text-xl font-extrabold font-['Manrope'] tracking-tight text-center">
             Pembayaran
           </h1>
         </div>
       </header>
 
-      <div className="max-w-lg mx-auto px-4 pt-6 space-y-6">
+      <div className="max-w-lg mx-auto px-5 pt-6 space-y-5">
         {/* QR Code */}
         {!expired ? (
-          <div className="bg-surface-container rounded-2xl p-6 flex flex-col items-center space-y-4">
+          <div className="bg-[#1c211b] rounded-2xl p-8 flex flex-col items-center space-y-5">
             <PaymentQR
               qrString={order.qr_string}
               orderId={orderId}
@@ -183,7 +183,7 @@ export default function PaymentPage() {
 
             {/* Countdown */}
             <div className="text-center">
-              <p className="text-xs text-muted-foreground mb-1">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-[#c1c9bf] mb-2">
                 Waktu tersisa
               </p>
               <CountdownTimer
@@ -194,13 +194,13 @@ export default function PaymentPage() {
 
             {/* Total */}
             <div className="text-center">
-              <p className="text-2xl font-bold text-primary">
+              <p className="text-3xl font-black font-['Manrope'] text-[#9dd3aa]">
                 {formatCurrency(order.total)}
               </p>
             </div>
           </div>
         ) : (
-          <div className="bg-surface-container rounded-2xl p-8 text-center space-y-4">
+          <div className="bg-[#1c211b] rounded-2xl p-8 text-center space-y-4">
             <div className="w-16 h-16 mx-auto rounded-full bg-destructive/10 flex items-center justify-center">
               <svg
                 width="32"
@@ -215,15 +215,15 @@ export default function PaymentPage() {
                 <path d="M15 9l-6 6M9 9l6 6" />
               </svg>
             </div>
-            <p className="text-foreground font-medium">
+            <p className="text-foreground font-bold font-['Manrope']">
               Pembayaran Kedaluwarsa
             </p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-[#c1c9bf]">
               Silakan buat pesanan baru
             </p>
             <button
               onClick={() => router.replace("/")}
-              className="mt-4 px-6 py-3 rounded-full bg-primary-container text-primary-foreground font-medium text-sm"
+              className="mt-4 px-8 py-4 rounded-full bg-[#4a7c59] text-white font-extrabold text-xs uppercase tracking-widest"
             >
               Pesan Lagi
             </button>
@@ -232,8 +232,8 @@ export default function PaymentPage() {
 
         {/* Payment Link */}
         {!expired && (
-          <div className="bg-surface-container rounded-xl p-4 space-y-3">
-            <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+          <div className="bg-[#1c211b] rounded-2xl p-5 space-y-3">
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#c1c9bf]">
               Link Pembayaran
             </p>
             <div className="flex items-center gap-2">
@@ -241,11 +241,11 @@ export default function PaymentPage() {
                 type="text"
                 readOnly
                 value={paymentUrl}
-                className="flex-1 text-xs !bg-surface-highest !rounded-lg !border-none !p-3"
+                className="flex-1 text-xs bg-[#181d17] rounded-xl border-none p-3"
               />
               <button
                 onClick={copyLink}
-                className="shrink-0 px-4 py-3 rounded-lg bg-primary-container text-primary-foreground text-xs font-medium"
+                className="shrink-0 px-5 py-3 rounded-xl bg-[#4a7c59] text-white text-xs font-bold"
               >
                 Salin
               </button>
@@ -255,7 +255,7 @@ export default function PaymentPage() {
 
         {/* Instructions */}
         {!expired && (
-          <p className="text-center text-sm text-muted-foreground px-4">
+          <p className="text-center text-sm text-[#c1c9bf] px-4">
             Scan QR code menggunakan aplikasi e-wallet atau mobile banking
           </p>
         )}
@@ -265,7 +265,7 @@ export default function PaymentPage() {
           <div className="text-center pt-4">
             <button
               onClick={handleCancel}
-              className="text-sm text-muted-foreground hover:text-destructive transition-colors"
+              className="text-sm text-[#c1c9bf] hover:text-destructive transition-colors"
             >
               Batalkan Pesanan
             </button>

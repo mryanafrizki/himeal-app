@@ -139,18 +139,18 @@ export default function OrderTrackingPage() {
 
   return (
     <main className="min-h-screen pb-24">
-      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-outline-variant/15">
-        <div className="max-w-lg mx-auto px-4 py-4">
-          <h1 className="text-lg font-bold tracking-tight text-center">
+      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-2xl border-b border-[#4a7c59]/10">
+        <div className="max-w-lg mx-auto px-5 py-4">
+          <h1 className="text-xl font-extrabold font-['Manrope'] tracking-tight text-center">
             Status Pesanan
           </h1>
-          <p className="text-xs text-muted-foreground text-center mt-1">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-[#c1c9bf] text-center mt-1">
             {orderId}
           </p>
         </div>
       </header>
 
-      <div className="max-w-lg mx-auto px-4 pt-6 space-y-6">
+      <div className="max-w-lg mx-auto px-5 pt-6 space-y-5">
         {/* Status Tracker */}
         <OrderTracker
           currentStatus={order.order_status}
@@ -159,47 +159,47 @@ export default function OrderTrackingPage() {
 
         {/* Estimated Time */}
         {estimatedMinutes !== null && (
-          <div className="bg-surface-container rounded-xl p-4 text-center">
-            <p className="text-xs text-muted-foreground">Estimasi</p>
-            <p className="text-lg font-bold text-primary">
+          <div className="bg-[#1c211b] rounded-2xl p-5 text-center">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[#c1c9bf]">Estimasi</p>
+            <p className="text-2xl font-black font-['Manrope'] text-[#9dd3aa] mt-1">
               ~{estimatedMinutes} menit
             </p>
           </div>
         )}
 
         {/* Order Summary */}
-        <div className="space-y-2">
-          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+        <div className="space-y-3">
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#c1c9bf]">
             Detail Pesanan
           </p>
-          <div className="bg-surface-container rounded-xl divide-y divide-outline-variant/15">
+          <div className="bg-[#1c211b] rounded-2xl divide-y divide-[#414942]/30">
             {order.items.map((item, i) => (
-              <div key={i} className="p-4 flex justify-between items-start">
+              <div key={i} className="p-5 flex justify-between items-start">
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground">
+                  <p className="text-sm font-bold font-['Manrope'] text-foreground">
                     {item.product_name} x{item.quantity}
                   </p>
                   {item.notes && (
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="text-xs text-[#c1c9bf] mt-1">
                       {item.notes}
                     </p>
                   )}
                 </div>
-                <p className="text-sm text-foreground ml-4">
+                <p className="text-sm font-medium text-foreground ml-4">
                   {formatCurrency(item.price * item.quantity)}
                 </p>
               </div>
             ))}
-            <div className="p-4 space-y-2">
+            <div className="p-5 space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Subtotal</span>
+                <span className="text-[#c1c9bf]">Subtotal</span>
                 <span>{formatCurrency(order.subtotal)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Ongkir</span>
+                <span className="text-[#c1c9bf]">Ongkir</span>
                 <span
                   className={
-                    order.delivery_fee === 0 ? "text-success" : "text-foreground"
+                    order.delivery_fee === 0 ? "text-[#9dd3aa]" : "text-foreground"
                   }
                 >
                   {order.delivery_fee === 0
@@ -207,9 +207,9 @@ export default function OrderTrackingPage() {
                     : formatCurrency(order.delivery_fee)}
                 </span>
               </div>
-              <div className="border-t border-outline-variant/15 pt-2 flex justify-between">
-                <span className="font-medium">Total</span>
-                <span className="font-bold text-primary">
+              <div className="border-t border-[#414942]/30 pt-3 flex justify-between items-center">
+                <span className="font-bold font-['Manrope']">Total</span>
+                <span className="text-xl font-black font-['Manrope'] text-[#9dd3aa]">
                   {formatCurrency(order.total)}
                 </span>
               </div>
@@ -218,12 +218,12 @@ export default function OrderTrackingPage() {
         </div>
 
         {/* Address */}
-        <div className="bg-surface-container rounded-xl p-4">
-          <p className="text-xs text-muted-foreground mb-1">
+        <div className="bg-[#1c211b] rounded-2xl p-5">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-[#c1c9bf] mb-2">
             Alamat Pengantaran
           </p>
           <p className="text-sm text-foreground">{order.customer_address}</p>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-xs text-[#c1c9bf] mt-1">
             {order.distance_km} km
           </p>
         </div>
@@ -232,7 +232,7 @@ export default function OrderTrackingPage() {
         <div className="flex gap-3">
           <button
             onClick={copyLink}
-            className="flex-1 py-3 rounded-full border border-outline-variant text-foreground text-sm font-medium hover:bg-surface-container transition-colors"
+            className="flex-1 py-4 rounded-full border border-[#4a7c59]/30 text-foreground text-xs font-extrabold uppercase tracking-widest hover:bg-[#1c211b] transition-colors"
           >
             Salin Link
           </button>

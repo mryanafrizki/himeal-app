@@ -83,13 +83,29 @@ export default function HomePage() {
     []
   );
 
-  const handleMapSelect = useCallback((lat: number, lng: number) => {
+  const handleMapSelect = useCallback(async (lat: number, lng: number) => {
     setSelectedLat(lat);
     setSelectedLng(lng);
     const dist = calculateDistanceFromHiMeal(lat, lng);
     const fee = calculateDeliveryFee(dist);
     setDistanceKm(Math.round(dist * 100) / 100);
     setDeliveryFee(fee);
+
+    // Reverse geocode to get address from map click
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+        { headers: { "User-Agent": "HiMeal-App" } }
+      );
+      const data = await res.json();
+      if (data.display_name) {
+        setAddress(data.display_name);
+      } else {
+        setAddress(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+      }
+    } catch {
+      setAddress(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+    }
   }, []);
 
   const cartItems = Object.values(cart);
@@ -166,17 +182,14 @@ export default function HomePage() {
   return (
     <main className="min-h-screen pb-32">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-outline-variant/15">
-        <div className="max-w-lg mx-auto px-4 py-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center">
-              <span className="text-primary text-sm font-bold">HM</span>
-            </div>
+      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-2xl border-b border-[#4a7c59]/10">
+        <div className="max-w-lg mx-auto px-5 py-4">
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-lg font-bold tracking-tight text-foreground">
+              <h1 className="text-3xl font-black text-[#9dd3aa] tracking-[-0.04em] uppercase font-['Manrope']">
                 HI MEAL!
               </h1>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[10px] tracking-[0.2em] uppercase text-[#c1c9bf]">
                 Good food, good mood
               </p>
             </div>
@@ -184,13 +197,23 @@ export default function HomePage() {
         </div>
       </header>
 
-      <div className="max-w-lg mx-auto px-4 pt-6 space-y-8">
+      {/* Hero Section */}
+      <div className="relative h-48 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#4a7c59]/20 via-[#10150f]/60 to-[#10150f]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(74,124,89,0.15)_0%,_transparent_70%)]" />
+        <div className="absolute bottom-6 left-0 right-0 text-center">
+          <p className="text-sm font-medium text-[#c1c9bf]">Healthy food delivery</p>
+          <p className="text-xs text-[#c1c9bf]/60 mt-1">Purwokerto</p>
+        </div>
+      </div>
+
+      <div className="max-w-lg mx-auto px-5 pt-6 space-y-8">
         {/* Menu Section */}
         <section>
-          <h2 className="text-sm font-medium uppercase tracking-widest text-muted-foreground mb-4">
+          <h2 className="text-2xl font-extrabold font-['Manrope'] tracking-tight text-foreground mb-5">
             Menu
           </h2>
-          <div className="space-y-3">
+          <div className="space-y-4">
             {MENU_ITEMS.map((item) => (
               <MenuCard
                 key={item.id}
@@ -206,14 +229,14 @@ export default function HomePage() {
 
         {/* Delivery Section */}
         <section>
-          <h2 className="text-sm font-medium uppercase tracking-widest text-muted-foreground mb-4">
+          <h2 className="text-2xl font-extrabold font-['Manrope'] tracking-tight text-foreground mb-5">
             Pengantaran
           </h2>
 
           <div className="space-y-4">
             <AddressSearch value={address} onChange={handleAddressSelect} />
 
-            <div className="rounded-xl overflow-hidden h-[300px]">
+            <div className="rounded-2xl overflow-hidden">
               <DeliveryMap
                 onLocationSelect={handleMapSelect}
                 selectedLat={selectedLat}
@@ -222,17 +245,17 @@ export default function HomePage() {
             </div>
 
             {distanceKm !== null && (
-              <div className="flex items-center justify-between bg-surface-container rounded-xl p-4">
+              <div className="flex items-center justify-between bg-[#111a11] border border-[#4a7c59]/30 rounded-2xl p-5">
                 <div>
-                  <p className="text-sm text-muted-foreground">Jarak</p>
-                  <p className="text-foreground font-medium">
+                  <p className="text-xs text-[#c1c9bf]">Jarak</p>
+                  <p className="text-foreground font-bold font-['Manrope'] text-lg">
                     {distanceKm} km
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-muted-foreground">Ongkir</p>
+                  <p className="text-xs text-[#c1c9bf]">Ongkir</p>
                   <p
-                    className={`font-medium ${deliveryFee === 0 ? "text-success" : "text-foreground"}`}
+                    className={`font-bold font-['Manrope'] text-lg ${deliveryFee === 0 ? "text-[#9dd3aa]" : "text-foreground"}`}
                   >
                     {deliveryFee === 0 ? "GRATIS" : formatCurrency(deliveryFee)}
                   </p>
