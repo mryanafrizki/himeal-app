@@ -160,7 +160,7 @@ export default function HomePage() {
           total: data.total,
           distanceKm: data.distanceKm,
           address: orderType === "delivery" ? address : "Takeaway - Ambil di lokasi HiMeal",
-          addressNotes: orderType === "delivery" ? addressNotes.trim() : "",
+          addressNotes: addressNotes.trim(),
         })
       );
 
@@ -417,7 +417,7 @@ export default function HomePage() {
             <span className="font-['Inter'] text-sm tracking-wide uppercase text-[#414942] hover:text-[#9dd3aa] transition-opacity cursor-pointer">The Vault</span>
             <span className="font-['Inter'] text-sm tracking-wide uppercase text-[#414942] hover:text-[#9dd3aa] transition-opacity cursor-pointer">Nutrition</span>
           </div>
-          <p className="font-['Inter'] text-xs tracking-wide uppercase text-[#414942]">&copy; 2024 HiMeal. Good food, good mood.</p>
+          <p className="font-['Inter'] text-xs tracking-wide uppercase text-[#414942]">&copy; {new Date().getFullYear()} HiMeal. Good food, good mood.</p>
         </div>
       </footer>
 

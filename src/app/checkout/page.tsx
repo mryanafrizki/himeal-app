@@ -209,7 +209,7 @@ export default function CheckoutPage() {
         <div className="flex flex-col md:flex-row justify-between items-center px-12 py-16 w-full max-w-screen-2xl mx-auto">
           <div className="flex flex-col items-center md:items-start mb-8 md:mb-0">
             <div className="text-lg font-bold text-[#9dd3aa] mb-2">HiMeal</div>
-            <p className="font-['Inter'] text-sm tracking-wide uppercase text-[#414942]">&copy; 2024 HiMeal. Good food, good mood.</p>
+            <p className="font-['Inter'] text-sm tracking-wide uppercase text-[#414942]">&copy; {new Date().getFullYear()} HiMeal. Good food, good mood.</p>
           </div>
           <div className="flex flex-wrap justify-center gap-8">
             <span className="font-['Inter'] text-sm tracking-wide uppercase text-[#414942] hover:text-[#9dd3aa] transition-opacity opacity-80 hover:opacity-100 cursor-pointer">Sourcing</span>
