@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 
 interface DeliveryMapProps {
   onLocationSelect: (lat: number, lng: number) => void;
+  onLocationClear?: () => void;
   selectedLat?: number;
   selectedLng?: number;
 }
@@ -32,6 +33,7 @@ function isShortLink(url: string): boolean {
 
 export default function DeliveryMap({
   onLocationSelect,
+  onLocationClear,
   selectedLat,
   selectedLng,
 }: DeliveryMapProps) {
@@ -149,20 +151,41 @@ export default function DeliveryMap({
 
   return (
     <div className="space-y-4">
-      {/* Toggle show/hide */}
-      <button
-        type="button"
-        onClick={() => setShowMap(!showMap)}
-        className="w-full flex items-center justify-between py-4 px-5 bg-surface-container rounded-2xl text-sm font-medium text-on-surface hover:bg-surface-container-high transition-colors active:scale-[0.98]"
-      >
-        <div className="flex items-center gap-3">
-          <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>pin_drop</span>
-          <span>{hasLocation ? "Titik lokasi sudah ditentukan" : "Tentukan titik lokasi (opsional)"}</span>
-        </div>
-        <span className="material-symbols-outlined text-on-surface-variant text-lg">
-          {showMap ? "expand_less" : "expand_more"}
-        </span>
-      </button>
+      {/* Toggle show/hide + clear */}
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => setShowMap(!showMap)}
+          className="flex-1 flex items-center justify-between py-4 px-5 bg-surface-container rounded-2xl text-sm font-medium text-on-surface hover:bg-surface-container-high transition-colors active:scale-[0.98]"
+        >
+          <div className="flex items-center gap-3">
+            <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>pin_drop</span>
+            <span>{hasLocation ? "Titik lokasi sudah ditentukan" : "Tentukan titik lokasi (opsional)"}</span>
+          </div>
+          <span className="material-symbols-outlined text-on-surface-variant text-lg">
+            {showMap ? "expand_less" : "expand_more"}
+          </span>
+        </button>
+
+        {/* Clear location button */}
+        {hasLocation && (
+          <button
+            type="button"
+            onClick={() => {
+              onLocationClear?.();
+              setShowMap(false);
+              setMethod("none");
+              setLinkInput("");
+              setLinkError(null);
+              setGpsError(null);
+            }}
+            className="flex items-center justify-center px-4 bg-surface-container rounded-2xl text-on-surface-variant hover:text-error hover:bg-error/10 transition-colors active:scale-95"
+            title="Hapus titik lokasi"
+          >
+            <span className="material-symbols-outlined text-lg">close</span>
+          </button>
+        )}
+      </div>
 
       {showMap && (
         <div className="space-y-4">

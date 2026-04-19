@@ -333,6 +333,12 @@ export default function HomePage() {
                 <label className="font-label text-xs uppercase tracking-widest text-on-surface-variant font-medium">Titik Lokasi (Opsional)</label>
                 <DeliveryMap
                   onLocationSelect={handleMapSelect}
+                  onLocationClear={() => {
+                    setSelectedLat(undefined);
+                    setSelectedLng(undefined);
+                    setDistanceKm(null);
+                    setDeliveryFee(0);
+                  }}
                   selectedLat={selectedLat}
                   selectedLng={selectedLng}
                 />
