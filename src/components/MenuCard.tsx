@@ -31,10 +31,15 @@ function PromoCountdown({ endDate }: { endDate: string }) {
     const calc = () => {
       const diff = new Date(endDate).getTime() - Date.now();
       if (diff <= 0) { setTimeLeft(""); return; }
-      const h = Math.floor(diff / 3600000);
+      const d = Math.floor(diff / 86400000);
+      const h = Math.floor((diff % 86400000) / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
       const s = Math.floor((diff % 60000) / 1000);
-      setTimeLeft(`${h > 0 ? `${h}j ` : ""}${m}m ${s}d`);
+      if (d > 0) {
+        setTimeLeft(`${d}d ${h}h ${m}m`);
+      } else {
+        setTimeLeft(`${String(h).padStart(2, "0")}h ${String(m).padStart(2, "0")}m ${String(s).padStart(2, "0")}s`);
+      }
     };
     calc();
     const id = setInterval(calc, 1000);
@@ -109,10 +114,10 @@ export default function MenuCard({
         <div className="absolute inset-0 z-20 pointer-events-none" />
       )}
 
-      {/* Promo badge */}
+      {/* Promo badge with discount % */}
       {hasPromo && (
         <div className="absolute top-3 right-3 z-10 bg-tertiary text-on-tertiary text-[10px] font-headline font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-lg animate-bounce-in">
-          PROMO
+          -{Math.round((1 - item.promo_price! / item.price) * 100)}%
         </div>
       )}
 

@@ -18,6 +18,7 @@ interface CheckoutItem {
   name: string;
   quantity: number;
   price: number;
+  originalPrice?: number;
   image: string;
   notes: string;
   addons: CheckoutAddon[];
@@ -365,13 +366,23 @@ export default function CheckoutPage() {
                     ) : (
                       <div className="h-full w-full bg-gradient-to-br from-primary-container/20 to-surface-container" />
                     )}
+                    {item.originalPrice && item.originalPrice > item.price && (
+                      <div className="absolute top-1 right-1 bg-tertiary text-on-tertiary text-[8px] font-black px-1.5 py-0.5 rounded-full">
+                        -{Math.round((1 - item.price / item.originalPrice) * 100)}%
+                      </div>
+                    )}
                   </div>
                   <div className="flex-grow min-w-0">
                     <div className="flex justify-between items-start gap-2">
                       <h3 className="font-headline font-bold text-on-surface truncate">{item.name}</h3>
-                      <span className="font-headline font-bold text-on-surface shrink-0">
-                        {formatCurrency((item.price + item.addons.reduce((s, a) => s + a.price, 0)) * item.quantity)}
-                      </span>
+                      <div className="text-right shrink-0">
+                        {item.originalPrice && item.originalPrice > item.price && (
+                          <span className="text-[10px] text-on-surface-variant line-through block">{formatCurrency(item.originalPrice * item.quantity)}</span>
+                        )}
+                        <span className="font-headline font-bold text-on-surface">
+                          {formatCurrency((item.price + item.addons.reduce((s, a) => s + a.price, 0)) * item.quantity)}
+                        </span>
+                      </div>
                     </div>
                     {item.addons.length > 0 && (
                       <p className="text-[11px] text-on-surface-variant mt-0.5">
@@ -482,6 +493,21 @@ export default function CheckoutPage() {
               <span className="font-label text-sm uppercase tracking-wider">Subtotal</span>
               <span className="font-headline font-medium text-on-surface">{formatCurrency(data.subtotal)}</span>
             </div>
+            {/* Promo discount */}
+            {(() => {
+              const origTotal = data.items.reduce((sum, item) => {
+                const orig = item.originalPrice && item.originalPrice > item.price ? item.originalPrice : item.price;
+                return sum + orig * item.quantity;
+              }, 0);
+              const promoDiscount = origTotal - data.subtotal;
+              const promoPct = origTotal > 0 ? Math.round((promoDiscount / origTotal) * 100) : 0;
+              return promoDiscount > 0 ? (
+                <div className="flex justify-between items-center">
+                  <span className="font-label text-sm uppercase tracking-wider text-primary font-bold">Diskon Promo ({promoPct}%)</span>
+                  <span className="font-headline font-bold text-primary">-{formatCurrency(promoDiscount)}</span>
+                </div>
+              ) : null;
+            })()}
             {voucherApplied && voucherDiscount > 0 && (
               <div className="flex justify-between items-center">
                 <span className="font-label text-sm uppercase tracking-wider text-tertiary">Diskon Voucher</span>

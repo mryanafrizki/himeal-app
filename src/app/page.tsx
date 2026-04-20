@@ -403,14 +403,19 @@ export default function HomePage() {
         "himeal_checkout",
         JSON.stringify({
           orderId: data.orderId,
-          items: cartItems.map((item) => ({
-            productId: item.productId,
-            name: item.name,
-            price: item.price,
-            quantity: item.quantity,
-            image: item.image,
-            addons: item.addons,
-          })),
+          items: cartItems.map((item) => {
+            const menuItem = menuItemsRef.current.find((m) => m.id === item.productId);
+            const origPrice = menuItem?.price ?? item.price;
+            return {
+              productId: item.productId,
+              name: item.name,
+              price: item.price,
+              originalPrice: origPrice !== item.price ? origPrice : undefined,
+              quantity: item.quantity,
+              image: item.image,
+              addons: item.addons,
+            };
+          }),
           orderType,
           customerName: customerName.trim(),
           customerPhone: customerPhone.trim(),

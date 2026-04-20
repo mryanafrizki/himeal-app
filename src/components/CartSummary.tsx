@@ -180,15 +180,15 @@ export default function CartSummary({
                   <span className="font-headline font-medium text-on-surface">{formatCurrency(subtotal)}</span>
                 </div>
                 {(() => {
-                  const totalDiscount = items.reduce((sum, item) => {
-                    if (item.originalPrice && item.originalPrice > item.price) {
-                      return sum + (item.originalPrice - item.price) * item.quantity;
-                    }
-                    return sum;
+                  const originalTotal = items.reduce((sum, item) => {
+                    const orig = item.originalPrice && item.originalPrice > item.price ? item.originalPrice : item.price;
+                    return sum + orig * item.quantity;
                   }, 0);
+                  const totalDiscount = originalTotal - subtotal;
+                  const pct = originalTotal > 0 ? Math.round((totalDiscount / originalTotal) * 100) : 0;
                   return totalDiscount > 0 ? (
                     <div className="flex justify-between text-xs">
-                      <span className="font-label text-sm uppercase tracking-wider text-primary font-bold">Diskon</span>
+                      <span className="font-label text-sm uppercase tracking-wider text-primary font-bold">Diskon ({pct}%)</span>
                       <span className="font-headline font-bold text-primary">-{formatCurrency(totalDiscount)}</span>
                     </div>
                   ) : null;
