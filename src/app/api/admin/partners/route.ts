@@ -35,8 +35,8 @@ export async function POST(request: NextRequest) {
     const partner = createPartner({
       id,
       name: body.name.trim(),
-      logo_url: (body.logoUrl || "").trim(),
-      link_url: (body.linkUrl || "").trim(),
+      logo_url: (body.logo_url || body.logo || body.logoUrl || "").trim(),
+      link_url: (body.link_url || body.link || body.linkUrl || "").trim(),
       sort_order: body.sort_order,
     });
 

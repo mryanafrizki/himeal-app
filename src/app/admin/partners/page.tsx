@@ -7,8 +7,8 @@ import { toast } from "sonner";
 interface Partner {
   id: string;
   name: string;
-  logo: string;
-  link: string;
+  logo_url: string;
+  link_url: string;
   sort_order: number;
   is_active: number;
   created_at: string;
@@ -58,8 +58,8 @@ export default function AdminPartnersPage() {
   const startEdit = (p: Partner) => {
     setEditingId(p.id);
     setName(p.name);
-    setLogo(p.logo);
-    setLink(p.link || "");
+    setLogo(p.logo_url);
+    setLink(p.link_url || "");
     setSortOrder(String(p.sort_order));
     setShowForm(true);
   };
@@ -72,8 +72,8 @@ export default function AdminPartnersPage() {
     try {
       const body = {
         name: name.trim(),
-        logo: logo.trim(),
-        link: link.trim() || null,
+        logo_url: logo.trim(),
+        link_url: link.trim() || "",
         sort_order: sortOrder ? Number(sortOrder) : 0,
       };
 
@@ -256,9 +256,9 @@ export default function AdminPartnersPage() {
             >
               {/* Logo */}
               <div className="w-14 h-14 rounded-xl overflow-hidden bg-white flex items-center justify-center shrink-0">
-                {partner.logo ? (
+                {partner.logo_url ? (
                   <img
-                    src={partner.logo}
+                    src={partner.logo_url}
                     alt={partner.name}
                     className="w-full h-full object-contain p-1.5"
                     onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
@@ -278,8 +278,8 @@ export default function AdminPartnersPage() {
                     </span>
                   )}
                 </div>
-                {partner.link && (
-                  <p className="text-xs text-primary truncate mt-0.5">{partner.link}</p>
+                {partner.link_url && (
+                  <p className="text-xs text-primary truncate mt-0.5">{partner.link_url}</p>
                 )}
                 <p className="text-xs text-outline mt-0.5 flex items-center gap-1">
                   <span className="material-symbols-outlined text-xs">sort</span>

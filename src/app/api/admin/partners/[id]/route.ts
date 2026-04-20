@@ -19,8 +19,8 @@ export async function PATCH(
     const body = await request.json();
     const updated = updatePartner(id, {
       name: body.name,
-      logo_url: body.logoUrl,
-      link_url: body.linkUrl,
+      logo_url: body.logo_url ?? body.logo ?? body.logoUrl,
+      link_url: body.link_url ?? body.link ?? body.linkUrl,
       sort_order: body.sort_order,
       is_active: body.is_active,
     });
