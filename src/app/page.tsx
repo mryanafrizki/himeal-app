@@ -9,7 +9,7 @@ import {
   calculateDeliveryFee,
 } from "@/lib/delivery";
 import MenuCard, { type Addon } from "@/components/MenuCard";
-import AddressSearch from "@/components/AddressSearch";
+// AddressSearch removed — using plain input
 import CartSummary from "@/components/CartSummary";
 import DeliveryMap from "@/components/DeliveryMap";
 
@@ -717,10 +717,22 @@ export default function HomePage() {
                 </p>
               </div>
 
-              {/* Address Search */}
+              {/* Address */}
               <div className="space-y-2" ref={addressRef}>
-                <label className="font-label text-xs uppercase tracking-widest text-on-surface-variant font-medium">Alamat Lengkap *</label>
-                <AddressSearch value={address} onChange={handleAddressSelect} />
+                <div className="flex items-center justify-between">
+                  <label className="font-label text-xs uppercase tracking-widest text-on-surface-variant font-medium">Alamat Lengkap *</label>
+                  <span className="text-[10px] text-outline">Pastikan mengisi informasi lengkap</span>
+                </div>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-primary text-lg pointer-events-none">location_on</span>
+                  <input
+                    type="text"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="Ketik alamat, nama tempat, atau jalan..."
+                    className="w-full pl-12 pr-4 py-4 bg-surface-container border-none rounded-2xl text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary shadow-inner"
+                  />
+                </div>
                 {errors.address && <p className="text-xs text-error font-medium pl-1">{errors.address}</p>}
               </div>
 
