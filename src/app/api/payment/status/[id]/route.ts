@@ -3,6 +3,7 @@ import { getOrder, updateOrderPaymentStatus } from "@/lib/db";
 import { checkPaymentStatus } from "@/lib/atlantic";
 import {
   sendTelegramNotification,
+  buildNewOrderMessage,
   buildPaymentConfirmedMessage,
 } from "@/lib/telegram";
 
@@ -65,9 +66,35 @@ export async function GET(
     if (paymentStatus === "success") {
       updateOrderPaymentStatus(id, "success", "confirmed");
 
-      // Send Telegram notification
-      const message = buildPaymentConfirmedMessage(id, order.total, order.customer_name);
-      await sendTelegramNotification(message);
+      // Send full order notification to Telegram (only after payment confirmed)
+      try {
+        const paidOrder = getOrder(id);
+        if (paidOrder) {
+          const orderMsg = buildNewOrderMessage({
+            orderId: id,
+            orderType: paidOrder.customer_address.startsWith("Takeaway") ? "takeaway" : "delivery",
+            customerName: paidOrder.customer_name,
+            customerPhone: paidOrder.customer_phone,
+            customerAddress: paidOrder.customer_address,
+            addressNotes: paidOrder.address_notes,
+            customerLat: paidOrder.customer_lat,
+            customerLng: paidOrder.customer_lng,
+            items: paidOrder.items.map((item) => ({
+              name: item.product_name,
+              qty: item.quantity,
+              price: item.price,
+              notes: item.notes,
+            })),
+            subtotal: paidOrder.subtotal,
+            deliveryFee: paidOrder.delivery_fee,
+            total: paidOrder.total,
+            distanceKm: paidOrder.distance_km,
+          });
+          await sendTelegramNotification(orderMsg);
+        }
+      } catch (teleErr) {
+        console.error("[Payment Status] Telegram notification failed:", teleErr);
+      }
 
       return NextResponse.json({
         status: "success",

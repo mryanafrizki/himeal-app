@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOrder, updateOrderPayment, getStoreSettings, updateOrderQrisInfo } from "@/lib/db";
 import { createQRIS } from "@/lib/atlantic";
-import {
-  sendTelegramNotification,
-  buildNewOrderMessage,
-} from "@/lib/telegram";
 import { PAYMENT_EXPIRY_MINUTES } from "@/lib/constants";
 
 export async function POST(request: NextRequest) {
@@ -77,28 +73,7 @@ export async function POST(request: NextRequest) {
       expiresAt
     );
 
-    // Send Telegram notification for new order
-    const message = buildNewOrderMessage({
-      orderId: body.orderId,
-      orderType: order.customer_address.startsWith("Takeaway") ? "takeaway" : "delivery",
-      customerName: order.customer_name,
-      customerPhone: order.customer_phone,
-      customerAddress: order.customer_address,
-      addressNotes: order.address_notes,
-      customerLat: order.customer_lat,
-      customerLng: order.customer_lng,
-      items: order.items.map((item) => ({
-        name: item.product_name,
-        qty: item.quantity,
-        price: item.price,
-        notes: item.notes,
-      })),
-      subtotal: order.subtotal,
-      deliveryFee: order.delivery_fee,
-      total: order.total,
-      distanceKm: order.distance_km,
-    });
-    await sendTelegramNotification(message);
+    // Telegram notification moved to payment/status — only sent after payment confirmed
 
     return NextResponse.json({
       paymentId: result.data.id,

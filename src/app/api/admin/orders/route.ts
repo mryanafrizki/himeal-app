@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
 
     let filtered = validOrders;
     if (paymentStatusFilter === "pending") {
-      filtered = validOrders.filter((o) => o.payment_status === "pending" && o.payment_id !== null);
+      filtered = validOrders.filter((o) => o.payment_status === "pending" && o.payment_id !== null && o.order_status !== "cancelled");
     } else if (paymentStatusFilter === "success") {
       filtered = validOrders.filter((o) => o.payment_status === "success");
     } else if (paymentStatusFilter === "cancelled") {
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
     // Count per payment status
     const paymentStatusCount = {
       all: validOrders.length,
-      pending: validOrders.filter((o) => o.payment_status === "pending" && o.payment_id !== null).length,
+      pending: validOrders.filter((o) => o.payment_status === "pending" && o.payment_id !== null && o.order_status !== "cancelled").length,
       success: validOrders.filter((o) => o.payment_status === "success").length,
       cancelled: validOrders.filter((o) => o.order_status === "cancelled" || o.payment_status === "expired").length,
     };

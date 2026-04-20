@@ -14,6 +14,7 @@ interface CartItem {
   name: string;
   quantity: number;
   price: number;
+  originalPrice?: number;
   addons?: CartAddon[];
 }
 
@@ -155,11 +156,18 @@ export default function CartSummary({
                           {item.quantity}x
                         </span>
                       )}
-                      <span className="text-sm font-headline font-medium text-on-surface w-20 text-right">
-                        {formatCurrency(
-                          (item.price + (item.addons?.reduce((s, a) => s + a.price, 0) || 0)) * item.quantity
+                      <div className="w-24 text-right">
+                        {item.originalPrice && item.originalPrice > item.price && (
+                          <span className="text-[10px] text-on-surface-variant line-through block">
+                            {formatCurrency(item.originalPrice * item.quantity)}
+                          </span>
                         )}
-                      </span>
+                        <span className="text-sm font-headline font-medium text-on-surface">
+                          {formatCurrency(
+                            (item.price + (item.addons?.reduce((s, a) => s + a.price, 0) || 0)) * item.quantity
+                          )}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 ))}

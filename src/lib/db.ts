@@ -935,6 +935,11 @@ export function validateVoucher(
     discount = orderTotal;
   }
 
+  // 0 discount = invalid
+  if (discount <= 0) {
+    return { valid: false, error: "Kode voucher tidak valid untuk pesanan ini" };
+  }
+
   return { valid: true, voucher, discount };
 }
 

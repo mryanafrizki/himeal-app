@@ -229,19 +229,22 @@ export default function HomePage() {
 
   const updateQuantity = useCallback((productId: string, quantity: number) => {
     setCart((prev) => {
-      const item = menuItemsRef.current.find((m) => m.id === productId);
+      const item = menuItemsRef.current.find((m) => m.id === productId) as MenuItem & { promo_price?: number | null; promo_end_date?: string | null } | undefined;
       if (!item) return prev;
       if (quantity <= 0) {
         const next = { ...prev };
         delete next[productId];
         return next;
       }
+      // Use promo price if active
+      const hasPromo = item.promo_price != null && item.promo_end_date && new Date(item.promo_end_date).getTime() > Date.now();
+      const effectivePrice = hasPromo ? item.promo_price! : item.price;
       return {
         ...prev,
         [productId]: {
           productId: item.id,
           name: item.name,
-          price: item.price,
+          price: effectivePrice,
           quantity,
           image: item.image,
           addons: prev[productId]?.addons || [],
@@ -1002,13 +1005,18 @@ export default function HomePage() {
       {/* Floating Cart Bar */}
       {cartItems.length > 0 && (
         <CartSummary
-          items={cartItems.map((item) => ({
-            productId: item.productId,
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price,
-            addons: item.addons,
-          }))}
+          items={cartItems.map((item) => {
+            const menuItem = menuItemsRef.current.find((m) => m.id === item.productId);
+            const origPrice = menuItem?.price ?? item.price;
+            return {
+              productId: item.productId,
+              name: item.name,
+              quantity: item.quantity,
+              price: item.price,
+              originalPrice: origPrice !== item.price ? origPrice : undefined,
+              addons: item.addons,
+            };
+          })}
           subtotal={subtotal}
           deliveryFee={deliveryFee}
           onCheckout={handleCheckout}
