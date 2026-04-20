@@ -135,6 +135,22 @@ export default function CheckoutPage() {
     syncStorage(updated);
   }, [data, recalcTotals, syncStorage, router]);
 
+  // Update addon qty on checkout item
+  const updateItemAddonQty = useCallback((index: number, addonId: string, qty: number) => {
+    if (!data) return;
+    const items = [...data.items];
+    const item = { ...items[index] };
+    if (qty <= 0) {
+      item.addons = item.addons.filter((a) => a.id !== addonId);
+    } else {
+      item.addons = item.addons.map((a) => a.id === addonId ? { ...a, qty } : a);
+    }
+    items[index] = item;
+    const updated = recalcTotals(items, data);
+    setData(updated);
+    syncStorage(updated);
+  }, [data, recalcTotals, syncStorage]);
+
   // Task 4b: Update item notes
   const updateItemNotes = useCallback((index: number, notes: string) => {
     if (!data) return;
@@ -417,9 +433,21 @@ export default function CheckoutPage() {
                       </span>
                     </div>
                     {item.addons.length > 0 && (
-                      <p className="text-[11px] text-on-surface-variant mt-0.5">
-                        + {item.addons.map((a) => a.name).join(", ")}
-                      </p>
+                      <div className="flex flex-wrap gap-1.5 mt-1.5">
+                        {item.addons.map((a) => (
+                          <div key={a.id} className="inline-flex items-center gap-1 bg-surface-container-highest rounded-full pl-2.5 pr-1 py-0.5">
+                            <span className="text-[10px] text-on-surface-variant">{a.name}{a.qty && a.qty > 1 ? ` x${a.qty}` : ""}</span>
+                            <div className="flex items-center gap-0.5">
+                              <button type="button" onClick={() => updateItemAddonQty(i, a.id, (a.qty || 1) - 1)} className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-error-container/30 text-on-surface-variant active:scale-90 transition-transform">
+                                <span className="material-symbols-outlined" style={{ fontSize: "10px" }}>{(a.qty || 1) <= 1 ? "close" : "remove"}</span>
+                              </button>
+                              <button type="button" onClick={() => updateItemAddonQty(i, a.id, (a.qty || 1) + 1)} className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-primary-container/30 text-on-surface-variant active:scale-90 transition-transform">
+                                <span className="material-symbols-outlined" style={{ fontSize: "10px" }}>add</span>
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     )}
                     {/* Task 1: Qty +/- controls */}
                     <div className="mt-2 flex items-center gap-1">
