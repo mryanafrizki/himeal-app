@@ -233,7 +233,7 @@ export default function AdminAddonsPage() {
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder="5000"
                 min="0"
-                step="500"
+                step="1"
                 className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm text-on-surface focus:ring-1 focus:ring-primary"
               />
               {priceNum > 0 && (

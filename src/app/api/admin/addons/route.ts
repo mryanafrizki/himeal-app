@@ -36,7 +36,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    if (!body.productId || typeof body.productId !== "string") {
+    const productId = body.productId || body.product_id;
+    if (!productId || typeof productId !== "string") {
       return NextResponse.json({ error: "Product ID is required" }, { status: 400 });
     }
     if (!body.name || typeof body.name !== "string") {
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Valid price is required" }, { status: 400 });
     }
 
-    const product = getProduct(body.productId);
+    const product = getProduct(productId);
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
 
     const addon = createAddon({
       id,
-      product_id: body.productId,
+      product_id: productId,
       name: body.name.trim(),
       price: body.price,
       sort_order: body.sort_order,
