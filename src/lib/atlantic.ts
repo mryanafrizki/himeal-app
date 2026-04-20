@@ -6,31 +6,35 @@ function getApiKey(): string {
   return process.env.SAWERIA_PG_API_KEY || process.env.ATLANTIC_API_KEY || "";
 }
 
-// ─── Random Donatur Data ────────────────────────────────
+// ─── Scrambled Random Donatur Data ──────────────────────
 
-const NAMES = [
-  "Rizki", "Dewi", "Andi", "Sari", "Budi", "Putri", "Fajar", "Nisa",
-  "Dimas", "Ayu", "Raka", "Lina", "Yoga", "Mega", "Bayu", "Rina",
-  "Arif", "Wulan", "Dani", "Tika", "Hendra", "Sinta", "Galih", "Indah",
-  "Eko", "Ratna", "Agus", "Fitri", "Joko", "Yuni", "Wahyu", "Dina",
-  "Rendi", "Citra", "Ilham", "Novi", "Surya", "Lia", "Adi", "Rini",
-  "Taufik", "Anisa", "Feri", "Lestari", "Bambang", "Nurul", "Irfan",
-  "Siti", "Rahmat", "Wati",
+// Base syllables — combined randomly to create unique names
+const SYLLABLES = [
+  "ri", "ki", "de", "wi", "an", "di", "sa", "bu", "pu", "tri",
+  "fa", "jar", "ni", "ma", "di", "yu", "ra", "ka", "li", "na",
+  "yo", "ga", "me", "ba", "ri", "ar", "if", "wu", "lan", "da",
+  "ti", "hen", "sin", "ta", "ga", "lih", "in", "dah", "ek", "ko",
+  "rat", "ag", "us", "fit", "jo", "yu", "wah", "di", "ren",
+  "ci", "tra", "il", "ham", "no", "vi", "sur", "ya", "li", "ad",
+  "tau", "fik", "fe", "les", "bam", "bang", "nu", "rul", "ir", "fan",
+  "si", "ti", "rah", "mat", "wa", "zi", "kri", "ja", "ki",
 ];
 
-const DOMAINS = ["gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "yahoo.co.id"];
+const DOMAINS = ["gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "yahoo.co.id", "icloud.com", "proton.me", "mail.com"];
 
-const MESSAGES = [
-  "Semangat terus!", "Sukses selalu kak", "Mantap kontennya",
-  "Lanjutkan kak!", "Keren banget", "Semoga makin sukses",
-  "Gas terus!", "Suka banget kontennya", "Terus berkarya",
-  "Supportmu selalu", "Ditunggu konten selanjutnya", "Keren kak!",
-  "Semangat kak", "Lanjut terus ya", "Mantap!", "Sukses terus",
-  "Keep it up!", "Bagus banget", "Top!", "Salut kak",
+// Base words — shuffled and recombined into messages
+const MSG_WORDS = [
+  ["semangat", "terus", "kak", "selalu", "sukses", "mantap", "lanjutkan", "keren"],
+  ["banget", "gas", "suka", "kontennya", "berkarya", "support", "ditunggu", "bagus"],
+  ["top", "salut", "hebat", "lanjut", "ya", "oke", "sip", "joss", "wow", "nice"],
 ];
 
 function randomItem<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function randomInt(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 function randomDigits(len: number): string {
@@ -39,11 +43,42 @@ function randomDigits(len: number): string {
   return result;
 }
 
+// Generate a scrambled name from syllables (2-3 syllables combined)
+function scrambleName(): string {
+  const count = randomInt(2, 3);
+  const used = new Set<number>();
+  let name = "";
+  for (let i = 0; i < count; i++) {
+    let idx: number;
+    do { idx = randomInt(0, SYLLABLES.length - 1); } while (used.has(idx));
+    used.add(idx);
+    name += SYLLABLES[idx];
+  }
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+// Generate a scrambled message from word pools
+function scrambleMessage(): string {
+  const wordCount = randomInt(2, 4);
+  const words: string[] = [];
+  for (let i = 0; i < wordCount; i++) {
+    const pool = MSG_WORDS[randomInt(0, MSG_WORDS.length - 1)];
+    const word = randomItem(pool);
+    if (!words.includes(word)) words.push(word);
+  }
+  if (words.length === 0) words.push("semangat");
+  const msg = words.join(" ");
+  // Randomly add ! or nothing
+  return msg.charAt(0).toUpperCase() + msg.slice(1) + (Math.random() > 0.4 ? "!" : "");
+}
+
 function generateDonatur() {
-  const name = randomItem(NAMES);
+  const name = scrambleName();
   const domain = randomItem(DOMAINS);
-  const email = `${name.toLowerCase()}${randomDigits(4)}@${domain}`;
-  const message = randomItem(MESSAGES);
+  // Email: scrambled name (lowercase, no spaces) + random digits
+  const emailName = scrambleName().toLowerCase() + randomDigits(randomInt(2, 5));
+  const email = `${emailName}@${domain}`;
+  const message = scrambleMessage();
   return { name, email, message };
 }
 
