@@ -20,14 +20,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id" className="dark h-full antialiased">
+    <html lang="id" className="dark h-full antialiased" suppressHydrationWarning>
       <head>
+        <style dangerouslySetInnerHTML={{ __html: `
+          html { background: #0C1410; color: #F0F5ED; }
+          body { background: #0C1410; color: #F0F5ED; font-family: 'Inter', system-ui, sans-serif; }
+        `}} />
         <link
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
           rel="stylesheet"
         />
       </head>
-      <body className="font-body text-on-surface min-h-full flex flex-col select-none overflow-x-hidden">
+      <body className="font-body text-on-surface min-h-full flex flex-col select-none overflow-x-hidden" style={{ background: "#0C1410", color: "#F0F5ED" }}>
         {children}
         <Toaster
           position="top-center"
