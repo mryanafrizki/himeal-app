@@ -68,8 +68,16 @@ export default function AdminRevenuePage() {
       if (res.status === 401) { router.push("/admin"); return; }
       if (res.ok) {
         const data = await res.json();
-        setRevenue(data.summary || { gross: 0, hpp: 0, net: 0, orderCount: 0, grossChange: 0, hppChange: 0 });
-        setChartData(data.chart || []);
+        const s = data.stats || data.summary || {};
+        setRevenue({
+          gross: s.grossRevenue ?? s.gross ?? 0,
+          hpp: s.totalHpp ?? s.hpp ?? 0,
+          net: s.netRevenue ?? s.net ?? 0,
+          orderCount: s.orderCount ?? 0,
+          grossChange: s.grossChange ?? 0,
+          hppChange: s.hppChange ?? 0,
+        });
+        setChartData(data.chartData || data.chart || []);
       }
     } catch { /* ignore */ }
   }, [adminKey, period, router]);

@@ -11,6 +11,7 @@ import CountdownTimer from "@/components/CountdownTimer";
 interface OrderData {
   id: string;
   total: number;
+  unique_code: number;
   qr_string: string | null;
   expires_at: string | null;
   payment_status: string;
@@ -191,9 +192,23 @@ export default function PaymentPage() {
         {!expired ? (
           <div className="w-full flex flex-col items-center gap-8">
             {/* Amount Display */}
-            <div className="text-center animate-fade-in-up">
-              <p className="font-label text-[10px] uppercase tracking-[0.1em] text-on-surface-variant mb-1">Total Pembayaran</p>
-              <h2 className="font-headline font-extrabold text-4xl tracking-tighter text-on-surface">{formatCurrency(order.total)}</h2>
+            <div className="text-center animate-fade-in-up w-full">
+              <div className="bg-surface-container rounded-2xl p-5 border border-outline-variant/10 space-y-2">
+                <div className="flex justify-between text-sm text-on-surface-variant">
+                  <span>Total Pesanan</span>
+                  <span className="text-on-surface font-medium">{formatCurrency(order.total)}</span>
+                </div>
+                {order.unique_code > 0 && (
+                  <div className="flex justify-between text-sm text-on-surface-variant">
+                    <span>Kode Unik</span>
+                    <span className="text-on-surface font-medium">+{formatCurrency(order.unique_code)}</span>
+                  </div>
+                )}
+                <div className="pt-2 border-t border-outline-variant/15 flex justify-between items-center">
+                  <span className="font-label text-[10px] uppercase tracking-[0.1em] text-on-surface-variant">Total Bayar</span>
+                  <span className="font-headline font-extrabold text-2xl tracking-tighter text-primary">{formatCurrency(order.total + (order.unique_code || 0))}</span>
+                </div>
+              </div>
             </div>
 
             {/* QR Code + Link */}
