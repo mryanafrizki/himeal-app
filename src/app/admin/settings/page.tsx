@@ -79,7 +79,24 @@ export default function AdminSettingsPage() {
       if (res.status === 401) { router.push("/admin"); return; }
       if (res.ok) {
         const data = await res.json();
-        setSettings((prev) => ({ ...prev, ...data }));
+        const s = data.settings || {};
+        const h = data.hours || [];
+        // Map API camelCase response to local snake_case Settings
+        const hours: Record<string, DaySchedule> = {};
+        const dayMap = [6, 0, 1, 2, 3, 4, 5]; // API dayOfWeek (0=Sun) → DAYS index
+        for (const dh of h) {
+          const dayKey = DAYS[dayMap[dh.dayOfWeek]]?.key;
+          if (dayKey) hours[dayKey] = { enabled: dh.isOpen, open: dh.openTime, close: dh.closeTime };
+        }
+        setSettings((prev) => ({
+          ...prev,
+          store_mode: s.storeMode || prev.store_mode,
+          info_message: s.infoMessage ?? prev.info_message,
+          maintenance_message: s.maintenanceMessage ?? prev.maintenance_message,
+          qris_active: s.qrisEnabled ?? prev.qris_active,
+          qris_fee_payer: s.qrisFeeMode || prev.qris_fee_payer,
+          operating_hours: { ...prev.operating_hours, ...hours },
+        }));
       }
     } catch {
       /* use defaults */

@@ -47,19 +47,24 @@ export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // Update store settings
+    // Update store settings — accept both camelCase and snake_case
     const settingsUpdate: Record<string, unknown> = {};
-    if (body.storeMode !== undefined) settingsUpdate.store_mode = body.storeMode;
-    if (body.infoMessage !== undefined) settingsUpdate.info_message = body.infoMessage;
-    if (body.maintenanceMessage !== undefined) settingsUpdate.maintenance_message = body.maintenanceMessage;
-    if (body.qrisEnabled !== undefined) settingsUpdate.qris_enabled = body.qrisEnabled ? 1 : 0;
-    if (body.qrisFeeMode !== undefined) settingsUpdate.qris_fee_mode = body.qrisFeeMode;
+    const storeMode = body.storeMode ?? body.store_mode;
+    const infoMessage = body.infoMessage ?? body.info_message;
+    const maintenanceMessage = body.maintenanceMessage ?? body.maintenance_message;
+    const qrisEnabled = body.qrisEnabled ?? body.qris_enabled ?? body.qris_active;
+    const qrisFeeMode = body.qrisFeeMode ?? body.qris_fee_mode ?? body.qris_fee_payer;
+    if (storeMode !== undefined) settingsUpdate.store_mode = storeMode;
+    if (infoMessage !== undefined) settingsUpdate.info_message = infoMessage;
+    if (maintenanceMessage !== undefined) settingsUpdate.maintenance_message = maintenanceMessage;
+    if (qrisEnabled !== undefined) settingsUpdate.qris_enabled = typeof qrisEnabled === "boolean" ? (qrisEnabled ? 1 : 0) : qrisEnabled;
+    if (qrisFeeMode !== undefined) settingsUpdate.qris_fee_mode = qrisFeeMode;
 
     if (Object.keys(settingsUpdate).length > 0) {
       updateStoreSettings(settingsUpdate as Parameters<typeof updateStoreSettings>[0]);
     }
 
-    // Update store hours
+    // Update store hours — accept both array format and operating_hours object
     if (body.hours && Array.isArray(body.hours)) {
       updateStoreHours(
         body.hours.map((h: { dayOfWeek: number; openTime: string; closeTime: string; isOpen: boolean }) => ({
@@ -69,6 +74,18 @@ export async function PATCH(request: NextRequest) {
           isOpen: h.isOpen ? 1 : 0,
         }))
       );
+    } else if (body.operating_hours && typeof body.operating_hours === "object") {
+      const dayNameToNum: Record<string, number> = { minggu: 0, senin: 1, selasa: 2, rabu: 3, kamis: 4, jumat: 5, sabtu: 6 };
+      const hoursArr = Object.entries(body.operating_hours).map(([key, val]) => {
+        const v = val as { enabled: boolean; open: string; close: string };
+        return {
+          dayOfWeek: dayNameToNum[key] ?? 0,
+          openTime: v.open,
+          closeTime: v.close,
+          isOpen: v.enabled ? 1 : 0,
+        };
+      });
+      updateStoreHours(hoursArr);
     }
 
     // Return updated data
