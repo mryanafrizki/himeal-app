@@ -152,7 +152,7 @@ export default function AdminSettingsPage() {
   return (
     <div className="min-h-screen pb-28">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-[#10150f]/90 backdrop-blur-xl border-b border-outline-variant/20">
+      <header className="sticky top-0 z-50 bg-[#0C1410]/90 backdrop-blur-xl border-b border-outline-variant/20">
         <div className="flex justify-between items-center px-6 py-4 max-w-5xl mx-auto">
           <div className="flex items-center gap-3">
             <button
@@ -439,14 +439,14 @@ export default function AdminSettingsPage() {
       </main>
 
       {/* Sticky Save Footer */}
-      <div className="fixed bottom-0 left-0 right-0 p-6 bg-[#10150f]/90 backdrop-blur-xl border-t border-outline-variant/20 z-40">
+      <div className="fixed bottom-0 left-0 right-0 p-6 bg-[#0C1410]/90 backdrop-blur-xl border-t border-outline-variant/20 z-40">
         <div className="max-w-5xl mx-auto">
           <button
             onClick={handleSave}
             disabled={saving || !dirty}
             className={`w-full py-4 font-bold rounded-2xl text-sm uppercase tracking-widest transition-all active:scale-[0.98] flex items-center justify-center gap-2 ${
               dirty
-                ? "bg-gradient-to-r from-primary to-primary-container text-on-primary shadow-[0_8px_32px_rgba(157,211,170,0.2)]"
+                ? "bg-gradient-to-r from-primary to-primary-container text-on-primary shadow-[0_8px_32px_rgba(91,219,111,0.2)]"
                 : "bg-surface-container-highest text-on-surface-variant cursor-not-allowed"
             }`}
           >

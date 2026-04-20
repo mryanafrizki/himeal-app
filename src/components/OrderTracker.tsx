@@ -26,7 +26,7 @@ export default function OrderTracker({
     <div className="space-y-0">
       {/* Estimated Time Card */}
       {estimatedMinutes !== undefined && estimatedMinutes > 0 && (
-        <section className="bg-[#111a11] rounded-3xl p-8 relative overflow-hidden mb-8">
+        <section className="bg-surface-container rounded-3xl p-8 relative overflow-hidden mb-8 animate-fade-in-up">
           <div className="absolute -top-12 -right-12 w-48 h-48 bg-primary/10 rounded-full blur-3xl" />
           <div className="relative z-10">
             <p className="font-label text-xs uppercase tracking-[0.1em] text-on-surface-variant mb-2">Waktu Kedatangan</p>
@@ -53,15 +53,16 @@ export default function OrderTracker({
           return (
             <div
               key={step.key}
-              className={`relative flex items-start gap-6 ${i < STEPS.length - 1 ? "pb-10" : ""} ${isFuture ? "opacity-40" : ""}`}
+              className={`relative flex items-start gap-6 ${i < STEPS.length - 1 ? "pb-10" : ""} ${isFuture ? "opacity-40" : ""} animate-fade-in-up`}
+              style={{ animationDelay: `${i * 120}ms` }}
             >
               {/* Step circle */}
               <div
-                className={`z-10 w-10 h-10 rounded-full flex items-center justify-center ring-4 ring-[#0a0f0a] ${
+                className={`z-10 w-10 h-10 rounded-full flex items-center justify-center ring-4 ring-surface-container-lowest ${
                   isCompleted
                     ? "bg-primary-container"
                     : isCurrent
-                      ? "bg-primary shadow-[0_0_20px_rgba(157,211,170,0.3)]"
+                      ? "bg-primary shadow-[0_0_20px_rgba(91,219,111,0.3)] animate-pulse-glow"
                       : "bg-surface-container-highest"
                 }`}
               >

@@ -49,8 +49,8 @@ export default function LeafletMap({ onLocationSelect, selectedLat, selectedLng 
     // HiMeal origin marker (small, subtle)
     L.circleMarker(HIMEAL_CENTER, {
       radius: 6,
-      color: "#4a7c59",
-      fillColor: "#9dd3aa",
+      color: "#2D7A3E",
+      fillColor: "#5BDB6F",
       fillOpacity: 0.8,
       weight: 2,
     }).addTo(map).bindTooltip("HiMeal", { permanent: false, direction: "top" });

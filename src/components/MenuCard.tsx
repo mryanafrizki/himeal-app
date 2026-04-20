@@ -41,7 +41,7 @@ export default function MenuCard({
   };
 
   return (
-    <div className={`bg-[#111a11] border border-[#4a7c59]/30 rounded-[2rem] p-5 space-y-4 shadow-xl relative overflow-hidden ${
+    <div className={`bg-surface-container border border-primary/12 rounded-[2rem] p-5 space-y-4 shadow-xl relative overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-primary/10 ${
       isOutOfStock ? "opacity-60" : ""
     }`}>
       {/* Out of stock overlay */}

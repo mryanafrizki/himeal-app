@@ -35,6 +35,8 @@ export function getDb(): Database.Database {
         notes TEXT,
         unique_code INTEGER NOT NULL DEFAULT 0,
         qris_fee INTEGER NOT NULL DEFAULT 0,
+        voucher_id TEXT,
+        voucher_discount INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
         expires_at TEXT,
         paid_at TEXT,
@@ -61,6 +63,7 @@ export function getDb(): Database.Database {
         sort_order INTEGER NOT NULL DEFAULT 0,
         is_out_of_stock INTEGER NOT NULL DEFAULT 0,
         max_order_qty INTEGER NOT NULL DEFAULT 0,
+        hpp INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
       );
 
@@ -82,11 +85,58 @@ export function getDb(): Database.Database {
         is_open INTEGER NOT NULL DEFAULT 1
       );
 
+      CREATE TABLE IF NOT EXISTS vouchers (
+        id TEXT PRIMARY KEY,
+        code TEXT UNIQUE NOT NULL,
+        discount_type TEXT NOT NULL,
+        discount_value INTEGER NOT NULL,
+        max_discount INTEGER,
+        min_order INTEGER NOT NULL DEFAULT 0,
+        quota INTEGER NOT NULL,
+        used_count INTEGER NOT NULL DEFAULT 0,
+        valid_from TEXT NOT NULL,
+        valid_until TEXT NOT NULL,
+        is_active INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+      );
+
+      CREATE TABLE IF NOT EXISTS chat_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        order_id TEXT NOT NULL REFERENCES orders(id),
+        sender TEXT NOT NULL,
+        message TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+      );
+
+      CREATE TABLE IF NOT EXISTS reviews (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        order_id TEXT UNIQUE NOT NULL REFERENCES orders(id),
+        rating INTEGER NOT NULL CHECK(rating >= 1 AND rating <= 5),
+        comment TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+      );
+
+      CREATE TABLE IF NOT EXISTS feedback (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        subject TEXT NOT NULL,
+        email TEXT NOT NULL,
+        message TEXT NOT NULL,
+        ip_address TEXT,
+        user_agent TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+      );
+
       CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(order_status);
       CREATE INDEX IF NOT EXISTS idx_orders_payment ON orders(payment_status);
       CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);
       CREATE INDEX IF NOT EXISTS idx_products_active ON products(is_active, sort_order);
+      CREATE INDEX IF NOT EXISTS idx_chat_order ON chat_messages(order_id, created_at);
     `);
+
+    // Migration: add columns to existing tables if they don't exist
+    try { db.exec("ALTER TABLE orders ADD COLUMN voucher_id TEXT"); } catch { /* already exists */ }
+    try { db.exec("ALTER TABLE orders ADD COLUMN voucher_discount INTEGER NOT NULL DEFAULT 0"); } catch { /* already exists */ }
+    try { db.exec("ALTER TABLE products ADD COLUMN hpp INTEGER NOT NULL DEFAULT 0"); } catch { /* already exists */ }
 
     seedDefaultProducts();
     seedDefaultStoreSettings();
@@ -113,6 +163,8 @@ export interface OrderRow {
   notes: string | null;
   unique_code: number;
   qris_fee: number;
+  voucher_id: string | null;
+  voucher_discount: number;
   created_at: string;
   expires_at: string | null;
   paid_at: string | null;
@@ -136,8 +188,8 @@ export function createOrder(
   const db = getDb();
 
   const insertOrder = db.prepare(`
-    INSERT INTO orders (id, customer_name, customer_phone, customer_address, customer_lat, customer_lng, address_notes, distance_km, delivery_fee, subtotal, total, payment_id, payment_status, order_status, qr_string, notes, unique_code, qris_fee, expires_at)
-    VALUES (@id, @customer_name, @customer_phone, @customer_address, @customer_lat, @customer_lng, @address_notes, @distance_km, @delivery_fee, @subtotal, @total, @payment_id, @payment_status, @order_status, @qr_string, @notes, @unique_code, @qris_fee, @expires_at)
+    INSERT INTO orders (id, customer_name, customer_phone, customer_address, customer_lat, customer_lng, address_notes, distance_km, delivery_fee, subtotal, total, payment_id, payment_status, order_status, qr_string, notes, unique_code, qris_fee, voucher_id, voucher_discount, expires_at)
+    VALUES (@id, @customer_name, @customer_phone, @customer_address, @customer_lat, @customer_lng, @address_notes, @distance_km, @delivery_fee, @subtotal, @total, @payment_id, @payment_status, @order_status, @qr_string, @notes, @unique_code, @qris_fee, @voucher_id, @voucher_discount, @expires_at)
   `);
 
   const insertItem = db.prepare(`
@@ -242,6 +294,7 @@ export interface ProductRow {
   sort_order: number;
   is_out_of_stock: number;
   max_order_qty: number;
+  hpp: number;
   created_at: string;
 }
 
@@ -274,6 +327,7 @@ export function createProduct(product: {
   sort_order?: number;
   is_out_of_stock?: number;
   max_order_qty?: number;
+  hpp?: number;
 }): ProductRow {
   const db = getDb();
   const maxOrder = db
@@ -281,13 +335,14 @@ export function createProduct(product: {
     .get() as { max_order: number };
 
   db.prepare(
-    `INSERT INTO products (id, name, price, description, image, sort_order, is_out_of_stock, max_order_qty)
-     VALUES (@id, @name, @price, @description, @image, @sort_order, @is_out_of_stock, @max_order_qty)`
+    `INSERT INTO products (id, name, price, description, image, sort_order, is_out_of_stock, max_order_qty, hpp)
+     VALUES (@id, @name, @price, @description, @image, @sort_order, @is_out_of_stock, @max_order_qty, @hpp)`
   ).run({
     ...product,
     sort_order: product.sort_order ?? maxOrder.max_order + 1,
     is_out_of_stock: product.is_out_of_stock ?? 0,
     max_order_qty: product.max_order_qty ?? 0,
+    hpp: product.hpp ?? 0,
   });
 
   return getProduct(product.id)!;
@@ -295,7 +350,7 @@ export function createProduct(product: {
 
 export function updateProduct(
   id: string,
-  fields: Partial<Pick<ProductRow, "name" | "price" | "description" | "image" | "is_active" | "sort_order" | "is_out_of_stock" | "max_order_qty">>
+  fields: Partial<Pick<ProductRow, "name" | "price" | "description" | "image" | "is_active" | "sort_order" | "is_out_of_stock" | "max_order_qty" | "hpp">>
 ): ProductRow | null {
   const db = getDb();
   const existing = getProduct(id);
@@ -369,6 +424,57 @@ export function getAllOrders(): (OrderRow & { items: OrderItemRow[] })[] {
       .all(order.id) as OrderItemRow[];
     return { ...order, items };
   });
+}
+
+export function getOrdersPaginated(options: {
+  page?: number;
+  limit?: number;
+  status?: string;
+  from?: string;
+  to?: string;
+  paymentStatus?: string;
+}): { orders: (OrderRow & { items: OrderItemRow[] })[]; total: number } {
+  const db = getDb();
+  const page = options.page || 1;
+  const limit = options.limit || 20;
+  const offset = (page - 1) * limit;
+
+  const conditions: string[] = [];
+  const params: unknown[] = [];
+
+  if (options.status) {
+    conditions.push("order_status = ?");
+    params.push(options.status);
+  }
+  if (options.paymentStatus && options.paymentStatus !== "all") {
+    conditions.push("payment_status = ?");
+    params.push(options.paymentStatus);
+  }
+  if (options.from) {
+    conditions.push("created_at >= ?");
+    params.push(options.from + " 00:00:00");
+  }
+  if (options.to) {
+    conditions.push("created_at <= ?");
+    params.push(options.to + " 23:59:59");
+  }
+
+  const where = conditions.length > 0 ? "WHERE " + conditions.join(" AND ") : "";
+
+  const countResult = db.prepare(`SELECT COUNT(*) as count FROM orders ${where}`).get(...params) as { count: number };
+
+  const orders = db
+    .prepare(`SELECT * FROM orders ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`)
+    .all(...params, limit, offset) as OrderRow[];
+
+  const ordersWithItems = orders.map((order) => {
+    const items = db
+      .prepare("SELECT * FROM order_items WHERE order_id = ?")
+      .all(order.id) as OrderItemRow[];
+    return { ...order, items };
+  });
+
+  return { orders: ordersWithItems, total: countResult.count };
 }
 
 // ─── QRIS Info ───────────────────────────────────────────────────────
@@ -511,4 +617,398 @@ export function isStoreOpen(): { isOpen: boolean; reason?: string } {
   }
 
   return { isOpen: true };
+}
+
+// ─── Revenue ─────────────────────────────────────────────────────────
+
+export function getRevenueStats(from?: string, to?: string): {
+  grossRevenue: number;
+  totalHpp: number;
+  netRevenue: number;
+  orderCount: number;
+} {
+  const db = getDb();
+  const conditions: string[] = ["o.order_status = 'delivered'"];
+  const params: unknown[] = [];
+
+  if (from) {
+    conditions.push("o.created_at >= ?");
+    params.push(from + " 00:00:00");
+  }
+  if (to) {
+    conditions.push("o.created_at <= ?");
+    params.push(to + " 23:59:59");
+  }
+
+  const where = conditions.join(" AND ");
+
+  // Gross revenue = sum of subtotals (excluding delivery fee)
+  const revenueResult = db.prepare(`
+    SELECT COALESCE(SUM(o.subtotal), 0) as grossRevenue, COUNT(*) as orderCount
+    FROM orders o WHERE ${where}
+  `).get(...params) as { grossRevenue: number; orderCount: number };
+
+  // Total HPP = sum of (item qty * product hpp) for delivered orders
+  const hppResult = db.prepare(`
+    SELECT COALESCE(SUM(oi.quantity * COALESCE(p.hpp, 0)), 0) as totalHpp
+    FROM orders o
+    JOIN order_items oi ON oi.order_id = o.id
+    LEFT JOIN products p ON p.id = oi.product_id
+    WHERE ${where}
+  `).get(...params) as { totalHpp: number };
+
+  return {
+    grossRevenue: revenueResult.grossRevenue,
+    totalHpp: hppResult.totalHpp,
+    netRevenue: revenueResult.grossRevenue - hppResult.totalHpp,
+    orderCount: revenueResult.orderCount,
+  };
+}
+
+export function getRevenueByPeriod(
+  period: "daily" | "weekly" | "monthly",
+  from?: string,
+  to?: string
+): { date: string; gross: number; net: number }[] {
+  const db = getDb();
+  const conditions: string[] = ["o.order_status = 'delivered'"];
+  const params: unknown[] = [];
+
+  if (from) {
+    conditions.push("o.created_at >= ?");
+    params.push(from + " 00:00:00");
+  }
+  if (to) {
+    conditions.push("o.created_at <= ?");
+    params.push(to + " 23:59:59");
+  }
+
+  const where = conditions.join(" AND ");
+
+  let dateExpr: string;
+  switch (period) {
+    case "daily":
+      dateExpr = "date(o.created_at)";
+      break;
+    case "weekly":
+      dateExpr = "date(o.created_at, 'weekday 0', '-6 days')";
+      break;
+    case "monthly":
+      dateExpr = "strftime('%Y-%m', o.created_at)";
+      break;
+  }
+
+  const rows = db.prepare(`
+    SELECT
+      ${dateExpr} as date,
+      SUM(o.subtotal) as gross,
+      SUM(o.subtotal) - COALESCE((
+        SELECT SUM(oi2.quantity * COALESCE(p2.hpp, 0))
+        FROM order_items oi2
+        LEFT JOIN products p2 ON p2.id = oi2.product_id
+        WHERE oi2.order_id = o.id
+      ), 0) as net
+    FROM orders o
+    WHERE ${where}
+    GROUP BY ${dateExpr}
+    ORDER BY date ASC
+  `).all(...params) as { date: string; gross: number; net: number }[];
+
+  // The correlated subquery above calculates per-order, but we need per-group.
+  // Let's use a simpler approach with a join.
+  const rows2 = db.prepare(`
+    SELECT
+      ${dateExpr} as date,
+      SUM(o.subtotal) as gross
+    FROM orders o
+    WHERE ${where}
+    GROUP BY ${dateExpr}
+    ORDER BY date ASC
+  `).all(...params) as { date: string; gross: number }[];
+
+  // Get HPP per period
+  const hppRows = db.prepare(`
+    SELECT
+      ${dateExpr} as date,
+      SUM(oi.quantity * COALESCE(p.hpp, 0)) as hpp
+    FROM orders o
+    JOIN order_items oi ON oi.order_id = o.id
+    LEFT JOIN products p ON p.id = oi.product_id
+    WHERE ${where}
+    GROUP BY ${dateExpr}
+    ORDER BY date ASC
+  `).all(...params) as { date: string; hpp: number }[];
+
+  const hppMap = new Map(hppRows.map((r) => [r.date, r.hpp]));
+
+  return rows2.map((r) => ({
+    date: r.date,
+    gross: r.gross,
+    net: r.gross - (hppMap.get(r.date) || 0),
+  }));
+}
+
+// ─── Vouchers ────────────────────────────────────────────────────────
+
+export interface VoucherRow {
+  id: string;
+  code: string;
+  discount_type: string;
+  discount_value: number;
+  max_discount: number | null;
+  min_order: number;
+  quota: number;
+  used_count: number;
+  valid_from: string;
+  valid_until: string;
+  is_active: number;
+  created_at: string;
+}
+
+export function getAllVouchers(): VoucherRow[] {
+  const db = getDb();
+  return db.prepare("SELECT * FROM vouchers ORDER BY created_at DESC").all() as VoucherRow[];
+}
+
+export function getVoucher(id: string): VoucherRow | null {
+  const db = getDb();
+  const row = db.prepare("SELECT * FROM vouchers WHERE id = ?").get(id) as VoucherRow | undefined;
+  return row ?? null;
+}
+
+export function getVoucherByCode(code: string): VoucherRow | null {
+  const db = getDb();
+  const row = db.prepare("SELECT * FROM vouchers WHERE code = ?").get(code.toUpperCase()) as VoucherRow | undefined;
+  return row ?? null;
+}
+
+export function createVoucher(data: {
+  id: string;
+  code: string;
+  discount_type: string;
+  discount_value: number;
+  max_discount?: number | null;
+  min_order: number;
+  quota: number;
+  valid_from: string;
+  valid_until: string;
+}): VoucherRow {
+  const db = getDb();
+  db.prepare(`
+    INSERT INTO vouchers (id, code, discount_type, discount_value, max_discount, min_order, quota, valid_from, valid_until)
+    VALUES (@id, @code, @discount_type, @discount_value, @max_discount, @min_order, @quota, @valid_from, @valid_until)
+  `).run({
+    ...data,
+    code: data.code.toUpperCase(),
+    max_discount: data.max_discount ?? null,
+  });
+  return getVoucher(data.id)!;
+}
+
+export function updateVoucher(
+  id: string,
+  fields: Partial<Pick<VoucherRow, "code" | "discount_type" | "discount_value" | "max_discount" | "min_order" | "quota" | "valid_from" | "valid_until" | "is_active">>
+): VoucherRow | null {
+  const db = getDb();
+  const existing = getVoucher(id);
+  if (!existing) return null;
+
+  const updates: string[] = [];
+  const values: Record<string, unknown> = { id };
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (value !== undefined) {
+      updates.push(`${key} = @${key}`);
+      values[key] = key === "code" && typeof value === "string" ? value.toUpperCase() : value;
+    }
+  }
+
+  if (updates.length === 0) return existing;
+
+  db.prepare(`UPDATE vouchers SET ${updates.join(", ")} WHERE id = @id`).run(values);
+  return getVoucher(id);
+}
+
+export function deleteVoucher(id: string): boolean {
+  const db = getDb();
+  const result = db.prepare("DELETE FROM vouchers WHERE id = ?").run(id);
+  return result.changes > 0;
+}
+
+export function validateVoucher(
+  code: string,
+  orderTotal: number
+): { valid: boolean; voucher?: VoucherRow; discount?: number; error?: string } {
+  const voucher = getVoucherByCode(code);
+  if (!voucher) {
+    return { valid: false, error: "Kode voucher tidak ditemukan" };
+  }
+  if (!voucher.is_active) {
+    return { valid: false, error: "Voucher tidak aktif" };
+  }
+
+  const now = new Date();
+  const nowStr = now.toISOString().slice(0, 19).replace("T", " ");
+  // Compare using local date strings
+  const nowDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
+  if (nowDate < voucher.valid_from.slice(0, 10)) {
+    return { valid: false, error: "Voucher belum berlaku" };
+  }
+  if (nowDate > voucher.valid_until.slice(0, 10)) {
+    return { valid: false, error: "Voucher sudah kedaluwarsa" };
+  }
+  if (voucher.used_count >= voucher.quota) {
+    return { valid: false, error: "Kuota voucher sudah habis" };
+  }
+  if (orderTotal < voucher.min_order) {
+    return { valid: false, error: `Minimum pembelian Rp ${voucher.min_order.toLocaleString("id-ID")}` };
+  }
+
+  // Calculate discount
+  let discount: number;
+  if (voucher.discount_type === "percentage") {
+    discount = Math.floor(orderTotal * voucher.discount_value / 100);
+    if (voucher.max_discount && discount > voucher.max_discount) {
+      discount = voucher.max_discount;
+    }
+  } else {
+    // fixed
+    discount = voucher.discount_value;
+  }
+
+  // Don't let discount exceed order total
+  if (discount > orderTotal) {
+    discount = orderTotal;
+  }
+
+  return { valid: true, voucher, discount };
+}
+
+export function applyVoucher(voucherId: string): void {
+  const db = getDb();
+  db.prepare("UPDATE vouchers SET used_count = used_count + 1 WHERE id = ?").run(voucherId);
+}
+
+// ─── Chat Messages ───────────────────────────────────────────────────
+
+export interface ChatMessageRow {
+  id: number;
+  order_id: string;
+  sender: string;
+  message: string;
+  created_at: string;
+}
+
+export function getChatMessages(orderId: string, afterId?: number): ChatMessageRow[] {
+  const db = getDb();
+  if (afterId) {
+    return db
+      .prepare("SELECT * FROM chat_messages WHERE order_id = ? AND id > ? ORDER BY created_at ASC")
+      .all(orderId, afterId) as ChatMessageRow[];
+  }
+  return db
+    .prepare("SELECT * FROM chat_messages WHERE order_id = ? ORDER BY created_at ASC")
+    .all(orderId) as ChatMessageRow[];
+}
+
+export function createChatMessage(orderId: string, sender: string, message: string): ChatMessageRow {
+  const db = getDb();
+  const result = db.prepare(
+    "INSERT INTO chat_messages (order_id, sender, message) VALUES (?, ?, ?)"
+  ).run(orderId, sender, message);
+  return db.prepare("SELECT * FROM chat_messages WHERE id = ?").get(result.lastInsertRowid) as ChatMessageRow;
+}
+
+export function getUnreadChatCount(orderId: string, sender: string): number {
+  const db = getDb();
+  // Count messages from the opposite sender
+  const oppositeSender = sender === "admin" ? "user" : "admin";
+  const result = db.prepare(
+    "SELECT COUNT(*) as count FROM chat_messages WHERE order_id = ? AND sender = ?"
+  ).get(orderId, oppositeSender) as { count: number };
+  return result.count;
+}
+
+// ─── Reviews ─────────────────────────────────────────────────────────
+
+export interface ReviewRow {
+  id: number;
+  order_id: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+}
+
+export function createReview(orderId: string, rating: number, comment?: string): ReviewRow {
+  const db = getDb();
+  const result = db.prepare(
+    "INSERT INTO reviews (order_id, rating, comment) VALUES (?, ?, ?)"
+  ).run(orderId, rating, comment ?? null);
+  return db.prepare("SELECT * FROM reviews WHERE id = ?").get(result.lastInsertRowid) as ReviewRow;
+}
+
+export function getReview(orderId: string): ReviewRow | null {
+  const db = getDb();
+  const row = db.prepare("SELECT * FROM reviews WHERE order_id = ?").get(orderId) as ReviewRow | undefined;
+  return row ?? null;
+}
+
+export function getAverageRating(): number {
+  const db = getDb();
+  const result = db.prepare("SELECT COALESCE(AVG(rating), 0) as avg FROM reviews").get() as { avg: number };
+  return Math.round(result.avg * 10) / 10;
+}
+
+export function getRecentReviews(limit: number = 10): (ReviewRow & { customer_name: string })[] {
+  const db = getDb();
+  return db.prepare(`
+    SELECT r.*, o.customer_name
+    FROM reviews r
+    JOIN orders o ON o.id = r.order_id
+    ORDER BY r.created_at DESC
+    LIMIT ?
+  `).all(limit) as (ReviewRow & { customer_name: string })[];
+}
+
+// ─── Feedback ────────────────────────────────────────────────────────
+
+export interface FeedbackRow {
+  id: number;
+  subject: string;
+  email: string;
+  message: string;
+  ip_address: string | null;
+  user_agent: string | null;
+  created_at: string;
+}
+
+export function createFeedback(data: {
+  subject: string;
+  email: string;
+  message: string;
+  ip_address?: string | null;
+  user_agent?: string | null;
+}): FeedbackRow {
+  const db = getDb();
+  const result = db.prepare(
+    "INSERT INTO feedback (subject, email, message, ip_address, user_agent) VALUES (?, ?, ?, ?, ?)"
+  ).run(data.subject, data.email, data.message, data.ip_address ?? null, data.user_agent ?? null);
+  return db.prepare("SELECT * FROM feedback WHERE id = ?").get(result.lastInsertRowid) as FeedbackRow;
+}
+
+export function getAllFeedback(page: number = 1, limit: number = 20): { feedback: FeedbackRow[]; total: number } {
+  const db = getDb();
+  const offset = (page - 1) * limit;
+  const countResult = db.prepare("SELECT COUNT(*) as count FROM feedback").get() as { count: number };
+  const rows = db.prepare("SELECT * FROM feedback ORDER BY created_at DESC LIMIT ? OFFSET ?").all(limit, offset) as FeedbackRow[];
+  return { feedback: rows, total: countResult.count };
+}
+
+export function getFeedbackRateLimit(ip: string, hours: number = 1): number {
+  const db = getDb();
+  const result = db.prepare(
+    "SELECT COUNT(*) as count FROM feedback WHERE ip_address = ? AND created_at >= datetime('now', 'localtime', ?)"
+  ).get(ip, `-${hours} hours`) as { count: number };
+  return result.count;
 }

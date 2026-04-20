@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import { calculateRoadDistance, calculateDeliveryFee, validateDeliveryDistance } from "@/lib/delivery";
-import { createOrder, getActiveProducts } from "@/lib/db";
+import { createOrder, getActiveProducts, validateVoucher, applyVoucher } from "@/lib/db";
 
 interface OrderItemInput {
   productId: string;
@@ -17,6 +17,7 @@ interface CreateOrderBody {
   addressNotes?: string;
   lat?: number;
   lng?: number;
+  voucherCode?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -123,7 +124,23 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const total = subtotal + deliveryFee;
+    // Voucher handling
+    let voucherId: string | null = null;
+    let voucherDiscount = 0;
+
+    if (body.voucherCode && typeof body.voucherCode === "string") {
+      const voucherResult = validateVoucher(body.voucherCode, subtotal);
+      if (!voucherResult.valid) {
+        return NextResponse.json(
+          { error: voucherResult.error },
+          { status: 400 }
+        );
+      }
+      voucherId = voucherResult.voucher!.id;
+      voucherDiscount = voucherResult.discount!;
+    }
+
+    const total = subtotal - voucherDiscount + deliveryFee;
 
     // Generate order
     const orderId = nanoid(10);
@@ -148,6 +165,8 @@ export async function POST(request: NextRequest) {
         notes: null,
         unique_code: 0,
         qris_fee: 0,
+        voucher_id: voucherId,
+        voucher_discount: voucherDiscount,
         expires_at: null,
       },
       validatedItems.map((item) => ({
@@ -160,10 +179,16 @@ export async function POST(request: NextRequest) {
       }))
     );
 
+    // Apply voucher (increment used_count) after order is created
+    if (voucherId) {
+      applyVoucher(voucherId);
+    }
+
     return NextResponse.json({
       orderId: order.id,
       subtotal,
       deliveryFee,
+      voucherDiscount,
       total,
       distanceKm,
     });

@@ -33,7 +33,7 @@ export default function CartSummary({
   if (items.length === 0) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-[60]">
+    <div className="fixed bottom-0 left-0 right-0 z-[60] animate-bounce-in">
       {/* Expanded panel */}
       {isExpanded && (
         <>
@@ -44,7 +44,7 @@ export default function CartSummary({
           />
 
           {/* Panel */}
-          <div className="relative mx-auto max-w-lg rounded-t-[2rem] border border-b-0 border-[#4a7c59]/30 bg-[#111a11] shadow-2xl shadow-black/50">
+          <div className="relative mx-auto max-w-lg rounded-t-[2rem] border border-b-0 border-primary/12 bg-surface-container shadow-2xl shadow-black/50">
             {/* Handle */}
             <div className="flex justify-center py-3">
               <div className="h-1 w-10 rounded-full bg-outline-variant" />
@@ -113,7 +113,7 @@ export default function CartSummary({
                 type="button"
                 onClick={onCheckout}
                 disabled={isLoading}
-                className="w-full bg-[#4a7c59] text-on-primary-container px-8 py-4 rounded-full font-headline font-extrabold uppercase tracking-widest text-sm hover:scale-105 active:scale-95 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-primary-container text-on-primary-container px-8 py-4 rounded-full font-headline font-extrabold uppercase tracking-widest text-sm hover:scale-105 active:scale-95 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? "Memproses..." : "Checkout"}
               </button>
@@ -138,7 +138,7 @@ export default function CartSummary({
               type="button"
               onClick={onCheckout}
               disabled={isLoading}
-              className="bg-[#4a7c59] text-on-primary-container px-8 py-4 rounded-full font-headline font-extrabold uppercase tracking-widest text-sm hover:scale-105 active:scale-95 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-primary-container text-on-primary-container px-8 py-4 rounded-full font-headline font-extrabold uppercase tracking-widest text-sm hover:scale-105 active:scale-95 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? "..." : "Checkout"}
             </button>

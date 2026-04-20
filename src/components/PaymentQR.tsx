@@ -34,7 +34,7 @@ export default function PaymentQR({
   return (
     <div className="w-full flex flex-col items-center gap-8">
       {/* QR Card */}
-      <div className="bg-[#111a11] p-8 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.4)] relative group transition-all duration-500 hover:shadow-[#4a7c59]/5">
+      <div className="bg-surface-container p-8 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.4)] relative group transition-all duration-500 hover:shadow-primary/5">
         <div className="bg-white p-4 rounded-2xl">
           <QRCodeSVG
             value={qrString}

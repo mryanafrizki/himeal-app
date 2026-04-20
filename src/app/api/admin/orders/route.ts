@@ -1,17 +1,53 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateAdmin } from "@/lib/admin";
-import { getAllOrders } from "@/lib/db";
+import { getAllOrders, getOrdersPaginated } from "@/lib/db";
 
 export async function GET(request: NextRequest) {
   const authError = validateAdmin(request);
   if (authError) return authError;
 
   try {
-    const orders = getAllOrders();
-
-    // Payment status filter
     const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get("page") || "0", 10);
+    const limit = parseInt(searchParams.get("limit") || "0", 10);
+    const status = searchParams.get("status") || undefined;
+    const from = searchParams.get("from") || undefined;
+    const to = searchParams.get("to") || undefined;
     const paymentStatusFilter = searchParams.get("payment_status") || "all";
+
+    // If pagination params provided, use paginated query
+    if (page > 0 && limit > 0) {
+      const result = getOrdersPaginated({
+        page,
+        limit,
+        status,
+        from,
+        to,
+        paymentStatus: paymentStatusFilter,
+      });
+
+      const totalPages = Math.ceil(result.total / limit);
+
+      // Count per payment status (from all matching orders, not just current page)
+      const allOrders = getAllOrders();
+      const paymentStatusCount = {
+        all: allOrders.length,
+        pending: allOrders.filter((o) => o.payment_status === "pending").length,
+        success: allOrders.filter((o) => o.payment_status === "success").length,
+        expired: allOrders.filter((o) => o.payment_status === "expired").length,
+      };
+
+      return NextResponse.json({
+        orders: result.orders,
+        total: result.total,
+        page,
+        totalPages,
+        paymentStatusCount,
+      });
+    }
+
+    // Legacy: return all orders (backward compatible)
+    const orders = getAllOrders();
 
     const filtered =
       paymentStatusFilter === "all"

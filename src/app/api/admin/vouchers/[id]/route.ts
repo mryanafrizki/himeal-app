@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateAdmin } from "@/lib/admin";
-import { getProduct, updateProduct, deleteProduct } from "@/lib/db";
+import { getVoucher, updateVoucher, deleteVoucher } from "@/lib/db";
 
 export async function PATCH(
   request: NextRequest,
@@ -11,29 +11,29 @@ export async function PATCH(
 
   try {
     const { id } = await params;
-    const existing = getProduct(id);
+    const existing = getVoucher(id);
     if (!existing) {
-      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+      return NextResponse.json({ error: "Voucher not found" }, { status: 404 });
     }
 
     const body = await request.json();
-    const updated = updateProduct(id, {
-      name: body.name,
-      price: body.price,
-      description: body.description,
-      image: body.image,
-      is_active: body.is_active,
-      sort_order: body.sort_order,
-      is_out_of_stock: body.isOutOfStock !== undefined ? (body.isOutOfStock ? 1 : 0) : undefined,
-      max_order_qty: body.maxOrderQty,
-      hpp: body.hpp,
+    const updated = updateVoucher(id, {
+      code: body.code,
+      discount_type: body.discountType,
+      discount_value: body.discountValue,
+      max_discount: body.maxDiscount,
+      min_order: body.minOrder,
+      quota: body.quota,
+      valid_from: body.validFrom,
+      valid_until: body.validUntil,
+      is_active: body.isActive !== undefined ? (body.isActive ? 1 : 0) : undefined,
     });
 
     return NextResponse.json(updated);
   } catch (error) {
-    console.error("[PATCH /api/admin/products/[id]]", error);
+    console.error("[PATCH /api/admin/vouchers/[id]]", error);
     return NextResponse.json(
-      { error: "Failed to update product" },
+      { error: "Failed to update voucher" },
       { status: 500 }
     );
   }
@@ -48,15 +48,15 @@ export async function DELETE(
 
   try {
     const { id } = await params;
-    const deleted = deleteProduct(id);
+    const deleted = deleteVoucher(id);
     if (!deleted) {
-      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+      return NextResponse.json({ error: "Voucher not found" }, { status: 404 });
     }
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("[DELETE /api/admin/products/[id]]", error);
+    console.error("[DELETE /api/admin/vouchers/[id]]", error);
     return NextResponse.json(
-      { error: "Failed to delete product" },
+      { error: "Failed to delete voucher" },
       { status: 500 }
     );
   }

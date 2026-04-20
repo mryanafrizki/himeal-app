@@ -58,7 +58,7 @@ export default function NewProductPage() {
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-[#10150f]/90 backdrop-blur-xl border-b border-outline-variant/20">
+      <header className="sticky top-0 z-50 bg-[#0C1410]/90 backdrop-blur-xl border-b border-outline-variant/20">
         <div className="flex items-center gap-3 px-6 py-4 max-w-2xl mx-auto">
           <button
             onClick={() => router.push("/admin/dashboard")}

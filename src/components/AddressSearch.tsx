@@ -127,7 +127,7 @@ export default function AddressSearch({ value, onChange }: AddressSearchProps) {
       </div>
 
       {isOpen && results.length > 0 && (
-        <ul className="absolute z-[9999] mt-2 w-full overflow-hidden rounded-2xl border border-[#4a7c59]/30 bg-[#111a11] shadow-2xl shadow-black/40 max-h-72 overflow-y-auto">
+        <ul className="absolute z-[9999] mt-2 w-full overflow-hidden rounded-2xl border border-primary/12 bg-surface-container shadow-2xl shadow-black/40 max-h-72 overflow-y-auto">
           {results.map((result) => (
             <li key={result.id}>
               <button

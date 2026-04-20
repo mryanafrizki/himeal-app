@@ -109,24 +109,24 @@ export default function CheckoutPage() {
   return (
     <>
       {/* TopAppBar */}
-      <header className="bg-[#10150f]/80 backdrop-blur-xl fixed top-0 w-full z-50 border-none">
+      <header className="bg-[#0C1410]/80 backdrop-blur-xl fixed top-0 w-full z-50 border-none">
         <div className="flex justify-between items-center w-full px-8 py-6 max-w-screen-2xl mx-auto">
           <div className="flex items-center gap-4">
             <button
               onClick={() => router.back()}
               className="text-primary hover:opacity-80 transition-opacity active:scale-95 duration-200"
             >
-              <span className="material-symbols-outlined text-[#9dd3aa] text-3xl">eco</span>
+              <span className="material-symbols-outlined text-primary text-3xl">eco</span>
             </button>
-            <h1 className="font-['Manrope'] tracking-tighter font-bold uppercase text-[#9dd3aa] text-xl">Ringkasan Pesanan</h1>
+            <h1 className="font-['Manrope'] tracking-tighter font-bold uppercase text-primary text-xl">Ringkasan Pesanan</h1>
           </div>
-          <div className="text-3xl font-black text-[#9dd3aa] tracking-[-0.04em]">HiMeal</div>
+          <div className="text-3xl font-black text-primary tracking-[-0.04em]">HiMeal</div>
         </div>
       </header>
 
       <main className="flex-grow pt-32 px-6 max-w-3xl mx-auto w-full">
         {/* Customer Info - Inline Editable */}
-        <section className="mb-10">
+        <section className="mb-10 animate-fade-in-up">
           <h2 className="font-headline text-on-surface-variant text-xs uppercase tracking-widest mb-4">Pemesan</h2>
           <div className="botanical-card rounded-xl p-6 space-y-3">
             {/* Name */}
@@ -165,7 +165,7 @@ export default function CheckoutPage() {
         </section>
 
         {/* Delivery Address Card - Inline Editable */}
-        <section className="mb-10">
+        <section className="mb-10 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
           <h2 className="font-headline text-on-surface-variant text-xs uppercase tracking-widest mb-4">Alamat Pengantaran</h2>
           <div className="botanical-card rounded-xl p-6 flex items-start gap-5">
             <div className="bg-primary-container/20 p-3 rounded-full shrink-0">
@@ -207,10 +207,10 @@ export default function CheckoutPage() {
 
         {/* Order Items */}
         <section className="mb-10">
-          <h2 className="font-headline text-on-surface-variant text-xs uppercase tracking-widest mb-4">Your Selection</h2>
+          <h2 className="font-headline text-on-surface-variant text-xs uppercase tracking-widest mb-4 animate-fade-in-up" style={{ animationDelay: '200ms' }}>Your Selection</h2>
           <div className="space-y-4">
             {data.items.map((item, i) => (
-              <div key={i} className="botanical-card rounded-xl overflow-hidden flex items-center p-4 gap-6 group">
+              <div key={i} className="botanical-card rounded-xl overflow-hidden flex items-center p-4 gap-6 group animate-slide-in-right" style={{ animationDelay: `${300 + i * 100}ms` }}>
                 <div className="relative h-20 w-20 flex-shrink-0 rounded-lg overflow-hidden bg-surface-container">
                   <div className="h-full w-full bg-gradient-to-br from-primary-container/20 to-surface-container" />
                 </div>
@@ -245,7 +245,7 @@ export default function CheckoutPage() {
         </section>
 
         {/* Pricing Summary Card */}
-        <section className="mb-20">
+        <section className="mb-20 animate-fade-in-up" style={{ animationDelay: '500ms' }}>
           <div className="botanical-card rounded-xl p-8 space-y-4">
             <div className="flex justify-between items-center text-on-surface-variant">
               <span className="font-label text-sm uppercase tracking-wider">Subtotal</span>
@@ -260,7 +260,7 @@ export default function CheckoutPage() {
             <div className="pt-6 border-t border-outline-variant/30 flex justify-between items-end">
               <div>
                 <span className="font-label text-xs uppercase tracking-[0.2em] text-on-surface-variant block mb-1">Total Amount</span>
-                <span className="font-headline font-black text-4xl text-primary tracking-tighter">{formatCurrency(data.total)}</span>
+                <span className="font-headline font-black text-4xl text-primary tracking-tighter animate-fade-in-up" style={{ animationDelay: '700ms' }}>{formatCurrency(data.total)}</span>
               </div>
               <div className="text-right">
                 <span className="text-on-surface-variant text-[10px] uppercase tracking-widest block">Incl. Tax (11%)</span>
@@ -275,7 +275,7 @@ export default function CheckoutPage() {
             <button
               onClick={handlePay}
               disabled={isProcessing}
-              className="w-full bg-gradient-to-br from-primary to-primary-container text-on-primary font-headline font-extrabold text-lg py-5 rounded-full shadow-[0_20px_40px_rgba(74,124,89,0.2)] hover:scale-[1.02] active:scale-95 transition-all duration-300 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-br from-primary to-primary-container text-on-primary font-headline font-extrabold text-lg py-5 rounded-full shadow-[0_20px_40px_rgba(91,219,111,0.2)] hover:scale-[1.02] active:scale-95 transition-all duration-300 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed animate-pulse-glow"
             >
               <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>lock</span>
               {isProcessing ? "Memproses..." : "Bayar Sekarang"}
@@ -285,17 +285,17 @@ export default function CheckoutPage() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-[#181d17] rounded-t-[2rem] mt-20">
+      <footer className="bg-surface-container-low rounded-t-[2rem] mt-20">
         <div className="flex flex-col md:flex-row justify-between items-center px-12 py-16 w-full max-w-screen-2xl mx-auto">
           <div className="flex flex-col items-center md:items-start mb-8 md:mb-0">
-            <div className="text-lg font-bold text-[#9dd3aa] mb-2">HiMeal</div>
-            <p className="font-['Inter'] text-sm tracking-wide uppercase text-[#414942]">&copy; {new Date().getFullYear()} HiMeal. Good food, good mood.</p>
+            <div className="text-lg font-bold text-primary mb-2">HiMeal</div>
+            <p className="font-['Inter'] text-sm tracking-wide uppercase text-outline-variant">&copy; {new Date().getFullYear()} HiMeal. Good food, good mood.</p>
           </div>
           <div className="flex flex-wrap justify-center gap-8">
-            <span className="font-['Inter'] text-sm tracking-wide uppercase text-[#414942] hover:text-[#9dd3aa] transition-opacity opacity-80 hover:opacity-100 cursor-pointer">Sourcing</span>
-            <span className="font-['Inter'] text-sm tracking-wide uppercase text-[#414942] hover:text-[#9dd3aa] transition-opacity opacity-80 hover:opacity-100 cursor-pointer">The Vault</span>
-            <span className="font-['Inter'] text-sm tracking-wide uppercase text-[#414942] hover:text-[#9dd3aa] transition-opacity opacity-80 hover:opacity-100 cursor-pointer">Nutrition</span>
-            <span className="font-['Inter'] text-sm tracking-wide uppercase text-[#414942] hover:text-[#9dd3aa] transition-opacity opacity-80 hover:opacity-100 cursor-pointer">Privacy</span>
+            <span className="font-['Inter'] text-sm tracking-wide uppercase text-outline-variant hover:text-primary transition-opacity opacity-80 hover:opacity-100 cursor-pointer">Sourcing</span>
+            <span className="font-['Inter'] text-sm tracking-wide uppercase text-outline-variant hover:text-primary transition-opacity opacity-80 hover:opacity-100 cursor-pointer">The Vault</span>
+            <span className="font-['Inter'] text-sm tracking-wide uppercase text-outline-variant hover:text-primary transition-opacity opacity-80 hover:opacity-100 cursor-pointer">Nutrition</span>
+            <span className="font-['Inter'] text-sm tracking-wide uppercase text-outline-variant hover:text-primary transition-opacity opacity-80 hover:opacity-100 cursor-pointer">Privacy</span>
           </div>
         </div>
       </footer>

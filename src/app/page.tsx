@@ -38,6 +38,22 @@ export default function HomePage() {
   const [deliveryFee, setDeliveryFee] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [distanceError, setDistanceError] = useState<string | null>(null);
+  const [saveData, setSaveData] = useState(false);
+
+  // FEAT-14: Restore saved customer data from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("himeal_saved_customer");
+      if (saved) {
+        const c = JSON.parse(saved);
+        if (c.customerName) setCustomerName(c.customerName);
+        if (c.customerPhone) setCustomerPhone(c.customerPhone);
+        if (c.address) setAddress(c.address);
+        if (c.addressNotes) setAddressNotes(c.addressNotes);
+        setSaveData(true);
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   // Restore cart and customer data from sessionStorage on mount
   useEffect(() => {
@@ -77,6 +93,17 @@ export default function HomePage() {
       selectedLat, selectedLng, distanceKm, deliveryFee, orderType,
     }));
   }, [customerName, customerPhone, address, addressNotes, selectedLat, selectedLng, distanceKm, deliveryFee, orderType]);
+
+  // FEAT-14: Save/remove from localStorage when checkbox changes
+  useEffect(() => {
+    if (saveData) {
+      localStorage.setItem("himeal_saved_customer", JSON.stringify({
+        customerName, customerPhone, address, addressNotes,
+      }));
+    } else {
+      localStorage.removeItem("himeal_saved_customer");
+    }
+  }, [saveData, customerName, customerPhone, address, addressNotes]);
 
   useEffect(() => {
     fetch("/api/products")
@@ -261,10 +288,10 @@ export default function HomePage() {
   return (
     <>
       {/* Top Navigation Shell */}
-      <header className="sticky top-0 z-50 bg-[#10150f]/80 backdrop-blur-xl border-none">
+      <header className="sticky top-0 z-50 bg-[#0C1410]/80 backdrop-blur-xl border-none">
         <div className="flex justify-between items-center w-full px-6 lg:px-8 py-6 max-w-5xl mx-auto">
           <div className="flex flex-col">
-            <span className="text-3xl font-black text-[#9dd3aa] tracking-[-0.04em] font-['Manrope'] uppercase">HI MEAL!</span>
+            <span className="text-3xl font-black text-[#5BDB6F] tracking-[-0.04em] font-['Manrope'] uppercase">HI MEAL!</span>
             <span className="font-['Inter'] text-[10px] tracking-[0.2em] uppercase text-on-surface-variant font-medium">Good food, good mood</span>
           </div>
           <div className="flex gap-4">
@@ -277,7 +304,7 @@ export default function HomePage() {
 
       <main className="px-6 lg:px-8 space-y-10 pb-32 max-w-5xl mx-auto">
         {/* Hero Section */}
-        <section className="mt-4">
+        <section className="mt-4 animate-fade-in">
           <div className="relative h-48 w-full rounded-3xl overflow-hidden bg-surface-container">
             <div className="w-full h-full bg-gradient-to-br from-primary-container/30 via-surface-container to-background" />
             <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
@@ -293,7 +320,7 @@ export default function HomePage() {
 
         {/* Menu Section */}
         <section className="space-y-6">
-          <div className="flex justify-between items-end">
+          <div className="flex justify-between items-end animate-fade-in-up">
             <div className="space-y-1">
               <h3 className="text-2xl font-headline font-extrabold text-on-surface tracking-tight">Today&apos;s Menu</h3>
               <p className="text-sm text-on-surface-variant font-body">Chef-designed for maximum macro-efficiency.</p>
@@ -304,7 +331,7 @@ export default function HomePage() {
             {menuLoading ? (
               <>
                 {[1, 2].map((i) => (
-                  <div key={i} className="bg-[#111a11] border border-[#4a7c59]/30 rounded-[2rem] p-5 space-y-4 animate-pulse">
+                  <div key={i} className="bg-surface-container border border-primary/12 rounded-[2rem] p-5 space-y-4 animate-pulse">
                     <div className="h-40 rounded-2xl bg-surface-container-highest" />
                     <div className="space-y-2">
                       <div className="h-6 bg-surface-container-highest rounded-lg w-3/4" />
@@ -315,22 +342,27 @@ export default function HomePage() {
                 ))}
               </>
             ) : (
-              menuItems.map((item) => (
-                <MenuCard
+              menuItems.map((item, index) => (
+                <div
                   key={item.id}
-                  item={item}
-                  quantity={cart[item.id]?.quantity || 0}
-                  notes={cart[item.id]?.notes || ""}
-                  onQuantityChange={(qty) => updateQuantity(item.id, qty)}
-                  onNotesChange={(notes) => updateNotes(item.id, notes)}
-                />
+                  className="animate-fade-in-up"
+                  style={{ animationDelay: `${index * 150}ms` }}
+                >
+                  <MenuCard
+                    item={item}
+                    quantity={cart[item.id]?.quantity || 0}
+                    notes={cart[item.id]?.notes || ""}
+                    onQuantityChange={(qty) => updateQuantity(item.id, qty)}
+                    onNotesChange={(notes) => updateNotes(item.id, notes)}
+                  />
+                </div>
               ))
             )}
           </div>
         </section>
 
         {/* Customer & Order Type Section */}
-        <section className="space-y-6 lg:sticky lg:top-24 lg:self-start">
+        <section className="space-y-6 lg:sticky lg:top-24 lg:self-start animate-fade-in-up" style={{ animationDelay: '200ms' }}>
           <h3 className="text-lg font-headline font-bold text-on-surface tracking-tight">Detail Pesanan</h3>
 
           {/* Order Type Toggle */}
@@ -522,21 +554,49 @@ export default function HomePage() {
               </div>
             </div>
           )}
+
+          {/* FEAT-14: Save data checkbox */}
+          <div className="flex items-center gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setSaveData(!saveData)}
+              className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-200 ${
+                saveData
+                  ? "bg-primary border-primary"
+                  : "border-outline bg-transparent hover:border-primary/50"
+              }`}
+            >
+              {saveData && (
+                <span className="material-symbols-outlined text-on-primary text-sm" style={{ fontVariationSettings: "'FILL' 1, 'wght' 700" }}>check</span>
+              )}
+            </button>
+            <label
+              onClick={() => setSaveData(!saveData)}
+              className="text-sm text-on-surface-variant cursor-pointer select-none"
+            >
+              Simpan data untuk pesanan berikutnya
+            </label>
+          </div>
         </section>
 
         </div>{/* end grid */}
       </main>
 
       {/* Footer Shell */}
-      <footer className="bg-[#181d17] rounded-t-[2rem] mt-20">
+      <footer className="bg-surface-container-low rounded-t-[2rem] mt-20">
         <div className="flex flex-col md:flex-row justify-between items-center px-12 py-16 w-full gap-8">
-          <div className="text-lg font-bold text-[#9dd3aa] font-headline uppercase tracking-widest">HI MEAL!</div>
+          <div className="text-lg font-bold text-primary font-headline uppercase tracking-widest">HI MEAL!</div>
           <div className="flex gap-6">
-            <span className="font-['Inter'] text-sm tracking-wide uppercase text-[#414942] hover:text-[#9dd3aa] transition-opacity cursor-pointer">Sourcing</span>
-            <span className="font-['Inter'] text-sm tracking-wide uppercase text-[#414942] hover:text-[#9dd3aa] transition-opacity cursor-pointer">The Vault</span>
-            <span className="font-['Inter'] text-sm tracking-wide uppercase text-[#414942] hover:text-[#9dd3aa] transition-opacity cursor-pointer">Nutrition</span>
+            <span className="font-['Inter'] text-sm tracking-wide uppercase text-outline-variant hover:text-primary transition-opacity cursor-pointer">Sourcing</span>
+            <span className="font-['Inter'] text-sm tracking-wide uppercase text-outline-variant hover:text-primary transition-opacity cursor-pointer">The Vault</span>
+            <span
+              onClick={() => router.push("/feedback")}
+              className="font-['Inter'] text-sm tracking-wide uppercase text-outline-variant hover:text-primary transition-opacity cursor-pointer"
+            >
+              Kritik & Saran
+            </span>
           </div>
-          <p className="font-['Inter'] text-xs tracking-wide uppercase text-[#414942]">&copy; {new Date().getFullYear()} HiMeal. Good food, good mood.</p>
+          <p className="font-['Inter'] text-xs tracking-wide uppercase text-outline-variant">&copy; {new Date().getFullYear()} HiMeal. Good food, good mood.</p>
         </div>
       </footer>
 

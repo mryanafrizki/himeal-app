@@ -261,7 +261,7 @@ export default function AdminDashboardPage() {
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-[#10150f]/90 backdrop-blur-xl border-b border-outline-variant/20">
+      <header className="sticky top-0 z-50 bg-[#0C1410]/90 backdrop-blur-xl border-b border-outline-variant/20">
         <div className="flex justify-between items-center px-6 py-4 max-w-5xl mx-auto">
           <div className="flex items-center gap-3">
             <span className="text-xl font-black text-primary tracking-[-0.04em] font-headline uppercase">
@@ -271,12 +271,33 @@ export default function AdminDashboardPage() {
               Admin
             </span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => router.push("/admin/vouchers")}
+              className="flex items-center gap-1 text-xs text-on-surface-variant hover:text-primary transition-colors px-2 py-1.5 rounded-lg hover:bg-surface-container"
+            >
+              <span className="material-symbols-outlined text-base">confirmation_number</span>
+              <span className="hidden sm:inline">Voucher</span>
+            </button>
+            <button
+              onClick={() => router.push("/admin/revenue")}
+              className="flex items-center gap-1 text-xs text-on-surface-variant hover:text-primary transition-colors px-2 py-1.5 rounded-lg hover:bg-surface-container"
+            >
+              <span className="material-symbols-outlined text-base">payments</span>
+              <span className="hidden sm:inline">Revenue</span>
+            </button>
+            <button
+              onClick={() => router.push("/admin/feedback")}
+              className="flex items-center gap-1 text-xs text-on-surface-variant hover:text-primary transition-colors px-2 py-1.5 rounded-lg hover:bg-surface-container"
+            >
+              <span className="material-symbols-outlined text-base">feedback</span>
+              <span className="hidden sm:inline">Feedback</span>
+            </button>
             <button
               onClick={() => router.push("/admin/settings")}
-              className="flex items-center gap-1.5 text-sm text-on-surface-variant hover:text-primary transition-colors"
+              className="flex items-center gap-1 text-xs text-on-surface-variant hover:text-primary transition-colors px-2 py-1.5 rounded-lg hover:bg-surface-container"
             >
-              <span className="material-symbols-outlined text-lg">settings</span>
+              <span className="material-symbols-outlined text-base">settings</span>
               <span className="hidden sm:inline">Pengaturan</span>
             </button>
             <button
