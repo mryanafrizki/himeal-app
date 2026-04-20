@@ -73,6 +73,7 @@ export default function CheckoutPage() {
         name: item.name || "",
         quantity: item.quantity || 1,
         price: item.price || 0,
+        originalPrice: item.originalPrice as number | undefined,
         image: item.image || "",
         notes: item.notes || "",
         addons: Array.isArray(item.addons) ? item.addons : [],

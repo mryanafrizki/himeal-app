@@ -395,7 +395,7 @@ export default function HomePage() {
           items: cartItems.map((item) => ({
             productId: item.productId,
             quantity: item.quantity,
-            addons: item.addons.length > 0 ? item.addons : undefined,
+            addons: item.addons.length > 0 ? item.addons.map((a) => ({ addonId: a.id, quantity: a.qty || 1 })) : undefined,
           })),
           orderType,
           customerName: customerName.trim(),
