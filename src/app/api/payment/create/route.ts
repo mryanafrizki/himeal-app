@@ -51,17 +51,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate unique code and calculate fee
-    const uniqueCode = Math.floor(Math.random() * 99) + 1; // 1-99
-    const qrisFee = Math.ceil(orderTotal * 0.007) + 200;
-
-    let nominal: number;
-    if (storeSettings.qris_fee_mode === "user") {
-      nominal = orderTotal + qrisFee + uniqueCode;
-    } else {
-      // admin mode (default)
-      nominal = orderTotal + uniqueCode;
-    }
+    // Saweria PG uses transaction_id for uniqueness — no need for unique code
+    const uniqueCode = 0;
+    const qrisFee = 0;
+    const nominal = orderTotal;
 
     // Save QRIS info to order
     updateOrderQrisInfo(body.orderId, uniqueCode, qrisFee);
