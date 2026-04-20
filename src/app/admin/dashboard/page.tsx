@@ -175,7 +175,7 @@ export default function AdminDashboardPage() {
       });
       if (res.status === 401) { router.push("/admin"); return; }
       const data = await res.json();
-      setPaidOrders(data);
+      setPaidOrders(Array.isArray(data) ? data : data.orders || []);
     } catch { /* ignore */ }
   }, [adminKey, router]);
 
@@ -187,7 +187,7 @@ export default function AdminDashboardPage() {
       });
       if (res.status === 401) { router.push("/admin"); return; }
       const data = await res.json();
-      setPendingOrders(data);
+      setPendingOrders(Array.isArray(data) ? data : data.orders || []);
     } catch { /* ignore */ }
   }, [adminKey, router]);
 
