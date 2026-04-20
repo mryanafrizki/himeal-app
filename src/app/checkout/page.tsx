@@ -52,6 +52,7 @@ export default function CheckoutPage() {
   const [voucherApplied, setVoucherApplied] = useState(false);
   const [voucherError, setVoucherError] = useState("");
   const [voucherLoading, setVoucherLoading] = useState(false);
+  const [voucherShake, setVoucherShake] = useState(false);
 
   // Task 10: Confirmation modal
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -176,10 +177,12 @@ export default function CheckoutPage() {
         body: JSON.stringify({ code: voucherCode.trim(), orderTotal: data.subtotal }),
       });
       const result = await res.json();
-      if (!res.ok) {
+      if (!res.ok || !result.valid) {
         setVoucherError(result.error || "Kode voucher tidak valid");
         setVoucherApplied(false);
         setVoucherDiscount(0);
+        setVoucherShake(true);
+        setTimeout(() => setVoucherShake(false), 600);
         return;
       }
       const discount = result.discount || 0;
@@ -421,16 +424,16 @@ export default function CheckoutPage() {
 
         {/* Task 6: Voucher Input */}
         <section className="mb-6 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
-          <div className="botanical-card rounded-xl p-5 space-y-3">
+          <div className={`botanical-card rounded-xl p-5 space-y-3 ${voucherShake ? "animate-shake" : ""} ${voucherError ? "border-error/40" : voucherApplied ? "border-primary/40" : ""}`}>
             <p className="text-sm font-medium text-on-surface">Punya kode voucher?</p>
             <div className="flex gap-2">
               <input
                 type="text"
                 value={voucherCode}
-                onChange={(e) => { setVoucherCode(e.target.value.toUpperCase()); setVoucherError(""); }}
+                onChange={(e) => { setVoucherCode(e.target.value.toUpperCase()); setVoucherError(""); setVoucherShake(false); }}
                 placeholder="Masukkan kode"
                 disabled={voucherApplied}
-                className="flex-1 px-4 py-3 bg-surface-container border-none rounded-xl text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary disabled:opacity-50"
+                className={`flex-1 px-4 py-3 bg-surface-container rounded-xl text-sm font-medium text-on-surface focus:ring-2 disabled:opacity-50 ${voucherError ? "ring-2 ring-error/50 focus:ring-error" : "border-none focus:ring-primary"}`}
               />
               {!voucherApplied ? (
                 <button
@@ -457,9 +460,17 @@ export default function CheckoutPage() {
                 </button>
               )}
             </div>
-            {voucherError && <p className="text-xs text-error font-medium">{voucherError}</p>}
+            {voucherError && (
+              <p className="text-xs text-error font-medium flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>error</span>
+                {voucherError}
+              </p>
+            )}
             {voucherApplied && (
-              <p className="text-xs text-primary font-semibold">Voucher diterapkan! Diskon {formatCurrency(voucherDiscount)}</p>
+              <p className="text-xs text-primary font-semibold flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                Voucher diterapkan! Diskon {formatCurrency(voucherDiscount)}
+              </p>
             )}
           </div>
         </section>
