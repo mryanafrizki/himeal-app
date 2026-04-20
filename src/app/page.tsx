@@ -663,6 +663,60 @@ export default function HomePage() {
           {/* Delivery-specific fields */}
           {orderType === "delivery" && (
             <>
+              {/* Delivery fee info banner */}
+              <div className="botanical-card rounded-xl p-4 flex items-start gap-3">
+                <span className="material-symbols-outlined text-primary text-lg mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>local_shipping</span>
+                <div className="flex-1 text-xs text-on-surface-variant leading-relaxed">
+                  <span className="text-primary font-bold">Gratis ongkir</span> untuk jarak {DELIVERY_CONFIG.freeDistanceKm} km pertama.
+                  Lebih dari itu mulai Rp {DELIVERY_CONFIG.baseFeeIDR.toLocaleString("id-ID")}.
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const el = document.getElementById("delivery-fee-modal");
+                      if (el) el.classList.toggle("hidden");
+                    }}
+                    className="ml-1 text-primary hover:underline font-semibold"
+                  >
+                    Read this
+                  </button>
+                </div>
+              </div>
+
+              {/* Delivery fee detail modal */}
+              <div id="delivery-fee-modal" className="hidden botanical-card rounded-xl p-5 space-y-3 animate-scale-in">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-headline font-bold text-on-surface text-sm">Rincian Ongkos Kirim</h4>
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById("delivery-fee-modal")?.classList.add("hidden")}
+                    className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-surface-container-highest transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-base text-on-surface-variant">close</span>
+                  </button>
+                </div>
+                <div className="space-y-2 text-xs text-on-surface-variant">
+                  <div className="flex justify-between py-2 border-b border-outline-variant/15">
+                    <span>0 - {DELIVERY_CONFIG.freeDistanceKm} km</span>
+                    <span className="text-primary font-bold">GRATIS</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-outline-variant/15">
+                    <span>{DELIVERY_CONFIG.freeDistanceKm} - {DELIVERY_CONFIG.freeDistanceKm + DELIVERY_CONFIG.baseDistanceKm} km</span>
+                    <span className="text-on-surface font-bold">Rp {DELIVERY_CONFIG.baseFeeIDR.toLocaleString("id-ID")}</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-outline-variant/15">
+                    <span>Setiap km berikutnya</span>
+                    <span className="text-on-surface font-bold">+ Rp {DELIVERY_CONFIG.perKmIDR.toLocaleString("id-ID")}/km</span>
+                  </div>
+                  <div className="flex justify-between py-2">
+                    <span>Jarak maksimum</span>
+                    <span className="text-on-surface font-bold">{DELIVERY_CONFIG.maxDistanceKm} km</span>
+                  </div>
+                </div>
+                <p className="text-[10px] text-outline leading-relaxed">
+                  Jarak dihitung via rute jalan dari lokasi HiMeal. Share lokasi untuk perhitungan otomatis, atau kami estimasi dari alamat.
+                </p>
+              </div>
+
               {/* Address Search */}
               <div className="space-y-2" ref={addressRef}>
                 <label className="font-label text-xs uppercase tracking-widest text-on-surface-variant font-medium">Alamat Lengkap *</label>
@@ -780,7 +834,7 @@ export default function HomePage() {
                   title="Lokasi HiMeal"
                   width="100%"
                   height="100%"
-                  style={{ border: 0 }}
+                  style={{ border: 0, filter: "invert(90%) hue-rotate(180deg) brightness(0.9) contrast(1.1)" }}
                   loading="lazy"
                   allowFullScreen
                   referrerPolicy="no-referrer-when-downgrade"
@@ -887,7 +941,7 @@ export default function HomePage() {
                 <circle cx="56" cy="42" r="4" fill="#5BDB6F" opacity="0.15"/>
               </svg>
             </div>
-            <p className="text-xs text-on-surface-variant mt-2 font-label tracking-wider">Makan sehat, hidup senang!</p>
+
           </div>
         </div>
       </div>
@@ -910,42 +964,22 @@ export default function HomePage() {
           {/* Divider */}
           <div className="h-px bg-outline-variant/15" />
 
-          {/* Social + Map row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Left: social + info */}
-            <div className="space-y-4">
-              <a
-                href="https://instagram.com/himeal.co"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-3 text-on-surface-variant hover:text-primary transition-colors group"
-              >
-                <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="2" y="2" width="20" height="20" rx="5"/>
-                  <circle cx="12" cy="12" r="5"/>
-                  <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/>
-                </svg>
-                <span className="font-['Inter'] text-sm">@himeal.co</span>
-              </a>
-              <p className="text-xs text-outline leading-relaxed">Good food, good mood. Healthy food delivery di Purwokerto.</p>
-            </div>
-
-            {/* Right: embedded map */}
-            <div className="space-y-2">
-              <p className="text-[10px] font-label uppercase tracking-[0.2em] text-on-surface-variant font-medium">Lokasi Toko</p>
-              <div className="rounded-2xl overflow-hidden h-48 border border-outline-variant/15">
-                <iframe
-                  src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d1000!2d109.2237517!3d-7.434855!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4t5!5e0!3m2!1sen!2sid"
-                  width="100%"
-                  height="100%"
-                  style={{ border: 0, filter: "invert(90%) hue-rotate(180deg) brightness(0.9) contrast(1.1)" }}
-                  allowFullScreen
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  title="Lokasi HiMeal"
-                />
-              </div>
-            </div>
+          {/* Social centered */}
+          <div className="flex flex-col items-center gap-3">
+            <a
+              href="https://instagram.com/himeal.co"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-3 text-on-surface-variant hover:text-primary transition-colors"
+            >
+              <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="2" width="20" height="20" rx="5"/>
+                <circle cx="12" cy="12" r="5"/>
+                <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/>
+              </svg>
+              <span className="font-['Inter'] text-sm">@himeal.co</span>
+            </a>
+            <p className="text-xs text-outline">Good food, good mood.</p>
           </div>
 
           {/* Bottom copyright (mobile) */}
