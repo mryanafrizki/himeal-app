@@ -43,15 +43,6 @@ interface Partner {
   link_url?: string;
 }
 
-interface CartItem {
-  productId: string;
-  name: string;
-  price: number;
-  quantity: number;
-  image: string;
-  addons: AddonItem[];
-}
-
 export default function HomePage() {
   const router = useRouter();
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);

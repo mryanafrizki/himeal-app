@@ -23,8 +23,9 @@ export default function RootLayout({
     <html lang="id" className="dark h-full antialiased" suppressHydrationWarning>
       <head>
         <style dangerouslySetInnerHTML={{ __html: `
-          html { background: #0C1410; color: #F0F5ED; }
-          body { background: #0C1410; color: #F0F5ED; font-family: 'Inter', system-ui, sans-serif; }
+          html, body { background: #0C1410 !important; color: #F0F5ED !important; font-family: 'Inter', system-ui, sans-serif; }
+          body { opacity: 0; transition: opacity 0.15s ease-in; }
+          body.ready { opacity: 1; }
         `}} />
         <link
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
@@ -32,6 +33,14 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body text-on-surface min-h-full flex flex-col select-none overflow-x-hidden" style={{ background: "#0C1410", color: "#F0F5ED" }}>
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function(){
+            function show(){ document.body.classList.add('ready'); }
+            if(document.readyState==='complete'){ show(); }
+            else { window.addEventListener('load', show); }
+            setTimeout(show, 800);
+          })();
+        `}} />
         {children}
         <Toaster
           position="top-center"
