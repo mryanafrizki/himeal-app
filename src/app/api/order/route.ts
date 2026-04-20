@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import { calculateRoadDistance, calculateDeliveryFee, validateDeliveryDistance } from "@/lib/delivery";
-import { createOrder, getActiveProducts, validateVoucher, applyVoucher } from "@/lib/db";
+import { createOrder, getActiveProducts, validateVoucher, applyVoucher, getAddonsByIds, createOrderItemAddons, getEffectivePrice } from "@/lib/db";
+
+interface AddonInput {
+  addonId: string;
+  quantity: number;
+}
 
 interface OrderItemInput {
   productId: string;
   quantity: number;
   notes?: string;
+  addons?: AddonInput[];
 }
 
 interface CreateOrderBody {
@@ -60,6 +66,7 @@ export async function POST(request: NextRequest) {
       price: number;
       quantity: number;
       notes: string | null;
+      validatedAddons: Array<{ addonId: string; addonName: string; addonPrice: number; quantity: number }>;
     }> = [];
 
     for (const item of body.items) {
@@ -88,20 +95,70 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
+
+      // Validate addons
+      const validatedAddons: Array<{ addonId: string; addonName: string; addonPrice: number; quantity: number }> = [];
+      if (item.addons && Array.isArray(item.addons) && item.addons.length > 0) {
+        const addonIds = item.addons.map((a) => a.addonId);
+        const dbAddons = getAddonsByIds(addonIds);
+
+        for (const addonInput of item.addons) {
+          const dbAddon = dbAddons.find((a) => a.id === addonInput.addonId);
+          if (!dbAddon) {
+            return NextResponse.json(
+              { error: `Add-on tidak valid: ${addonInput.addonId}` },
+              { status: 400 }
+            );
+          }
+          if (dbAddon.product_id !== item.productId) {
+            return NextResponse.json(
+              { error: `Add-on ${dbAddon.name} bukan milik produk ${menuItem.name}` },
+              { status: 400 }
+            );
+          }
+          if (!dbAddon.is_active) {
+            return NextResponse.json(
+              { error: `Add-on ${dbAddon.name} tidak tersedia` },
+              { status: 400 }
+            );
+          }
+          const addonQty = addonInput.quantity || 1;
+          if (addonQty < 1) {
+            return NextResponse.json(
+              { error: `Jumlah add-on tidak valid untuk ${dbAddon.name}` },
+              { status: 400 }
+            );
+          }
+          validatedAddons.push({
+            addonId: dbAddon.id,
+            addonName: dbAddon.name,
+            addonPrice: dbAddon.price,
+            quantity: addonQty,
+          });
+        }
+      }
+
+      const effectivePrice = getEffectivePrice(menuItem);
+
       validatedItems.push({
         productId: menuItem.id,
         productName: menuItem.name,
-        price: menuItem.price,
+        price: effectivePrice,
         quantity: item.quantity,
         notes: item.notes || null,
+        validatedAddons,
       });
     }
 
-    // Calculate pricing
-    const subtotal = validatedItems.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0
-    );
+    // Calculate pricing (item price + addon totals)
+    const subtotal = validatedItems.reduce((sum, item) => {
+      const itemTotal = item.price * item.quantity;
+      const addonTotal = item.validatedAddons.reduce(
+        (aSum, a) => aSum + a.addonPrice * a.quantity * item.quantity,
+        0
+      );
+      return sum + itemTotal + addonTotal;
+    }, 0);
 
     // Calculate distance if lat/lng provided
     let distanceKm = 0;
@@ -178,6 +235,27 @@ export async function POST(request: NextRequest) {
         notes: item.notes,
       }))
     );
+
+    // Insert order item addons
+    if (order.items.length > 0) {
+      for (let i = 0; i < validatedItems.length; i++) {
+        const vItem = validatedItems[i];
+        if (vItem.validatedAddons.length > 0) {
+          // Match by index — items are inserted in same order
+          const orderItem = order.items[i];
+          if (orderItem) {
+            createOrderItemAddons(
+              orderItem.id,
+              vItem.validatedAddons.map((a) => ({
+                addon_name: a.addonName,
+                addon_price: a.addonPrice,
+                quantity: a.quantity,
+              }))
+            );
+          }
+        }
+      }
+    }
 
     // Apply voucher (increment used_count) after order is created
     if (voucherId) {

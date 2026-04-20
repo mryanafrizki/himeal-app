@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/constants";
+import { celebrate } from "@/lib/confetti";
 import PaymentQR from "@/components/PaymentQR";
 import CountdownTimer from "@/components/CountdownTimer";
 
@@ -65,6 +66,7 @@ export default function PaymentPage() {
       }
 
       if (data.payment_status === "success") {
+        celebrate();
         router.replace(`/order/${orderId}`);
       }
     } catch {
@@ -102,6 +104,7 @@ export default function PaymentPage() {
         if (data.status === "success") {
           if (pollingRef.current) clearInterval(pollingRef.current);
           setFailCount(0);
+          celebrate();
           toast.success("Pembayaran berhasil!");
           router.replace(`/order/${orderId}`);
         } else if (data.status === "expired") {

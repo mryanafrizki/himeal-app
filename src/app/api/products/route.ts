@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getActiveProducts } from "@/lib/db";
+import { getActiveProducts, getEffectivePrice } from "@/lib/db";
 
 export async function GET() {
   try {
@@ -13,6 +13,9 @@ export async function GET() {
         image: p.image,
         is_out_of_stock: p.is_out_of_stock,
         max_order_qty: p.max_order_qty,
+        promo_price: p.promo_price,
+        promo_end_date: p.promo_end_date,
+        effective_price: getEffectivePrice(p),
       }))
     );
   } catch (error) {

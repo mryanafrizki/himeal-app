@@ -126,20 +126,63 @@ export function getDb(): Database.Database {
         created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
       );
 
+      CREATE TABLE IF NOT EXISTS hero_slides (
+        id TEXT PRIMARY KEY,
+        image TEXT NOT NULL DEFAULT '',
+        title TEXT NOT NULL DEFAULT '',
+        subtitle TEXT NOT NULL DEFAULT '',
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        is_active INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+      );
+
+      CREATE TABLE IF NOT EXISTS product_addons (
+        id TEXT PRIMARY KEY,
+        product_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        price INTEGER NOT NULL DEFAULT 0,
+        is_active INTEGER NOT NULL DEFAULT 1,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+      );
+
+      CREATE TABLE IF NOT EXISTS order_item_addons (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        order_item_id INTEGER NOT NULL,
+        addon_name TEXT NOT NULL,
+        addon_price INTEGER NOT NULL,
+        quantity INTEGER NOT NULL DEFAULT 1
+      );
+
+      CREATE TABLE IF NOT EXISTS partners (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        logo_url TEXT NOT NULL DEFAULT '',
+        link_url TEXT NOT NULL DEFAULT '',
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        is_active INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+      );
+
       CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(order_status);
       CREATE INDEX IF NOT EXISTS idx_orders_payment ON orders(payment_status);
       CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);
       CREATE INDEX IF NOT EXISTS idx_products_active ON products(is_active, sort_order);
       CREATE INDEX IF NOT EXISTS idx_chat_order ON chat_messages(order_id, created_at);
+      CREATE INDEX IF NOT EXISTS idx_addons_product ON product_addons(product_id, is_active);
+      CREATE INDEX IF NOT EXISTS idx_order_item_addons ON order_item_addons(order_item_id);
     `);
 
     // Migration: add columns to existing tables if they don't exist
     try { db.exec("ALTER TABLE orders ADD COLUMN voucher_id TEXT"); } catch { /* already exists */ }
     try { db.exec("ALTER TABLE orders ADD COLUMN voucher_discount INTEGER NOT NULL DEFAULT 0"); } catch { /* already exists */ }
     try { db.exec("ALTER TABLE products ADD COLUMN hpp INTEGER NOT NULL DEFAULT 0"); } catch { /* already exists */ }
+    try { db.exec("ALTER TABLE products ADD COLUMN promo_price INTEGER"); } catch { /* already exists */ }
+    try { db.exec("ALTER TABLE products ADD COLUMN promo_end_date TEXT"); } catch { /* already exists */ }
 
     seedDefaultProducts();
     seedDefaultStoreSettings();
+    seedDefaultHeroSlides();
   }
   return db;
 }
@@ -184,7 +227,7 @@ export interface OrderItemRow {
 export function createOrder(
   order: Omit<OrderRow, "created_at" | "updated_at" | "paid_at">,
   items: Omit<OrderItemRow, "id">[]
-): OrderRow {
+): OrderRow & { items: (OrderItemRow & { addons: OrderItemAddonRow[] })[] } {
   const db = getDb();
 
   const insertOrder = db.prepare(`
@@ -209,7 +252,7 @@ export function createOrder(
   return getOrder(order.id)!;
 }
 
-export function getOrder(id: string): (OrderRow & { items: OrderItemRow[] }) | null {
+export function getOrder(id: string): (OrderRow & { items: (OrderItemRow & { addons: OrderItemAddonRow[] })[] }) | null {
   const db = getDb();
   const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(id) as
     | OrderRow
@@ -220,7 +263,15 @@ export function getOrder(id: string): (OrderRow & { items: OrderItemRow[] }) | n
     .prepare("SELECT * FROM order_items WHERE order_id = ?")
     .all(id) as OrderItemRow[];
 
-  return { ...order, items };
+  const itemIds = items.map((i) => i.id);
+  const allAddons = itemIds.length > 0 ? getOrderItemAddons(itemIds) : [];
+
+  const itemsWithAddons = items.map((item) => ({
+    ...item,
+    addons: allAddons.filter((a) => a.order_item_id === item.id),
+  }));
+
+  return { ...order, items: itemsWithAddons };
 }
 
 export function updateOrderPayment(
@@ -295,6 +346,8 @@ export interface ProductRow {
   is_out_of_stock: number;
   max_order_qty: number;
   hpp: number;
+  promo_price: number | null;
+  promo_end_date: string | null;
   created_at: string;
 }
 
@@ -350,7 +403,7 @@ export function createProduct(product: {
 
 export function updateProduct(
   id: string,
-  fields: Partial<Pick<ProductRow, "name" | "price" | "description" | "image" | "is_active" | "sort_order" | "is_out_of_stock" | "max_order_qty" | "hpp">>
+  fields: Partial<Pick<ProductRow, "name" | "price" | "description" | "image" | "is_active" | "sort_order" | "is_out_of_stock" | "max_order_qty" | "hpp" | "promo_price" | "promo_end_date">>
 ): ProductRow | null {
   const db = getDb();
   const existing = getProduct(id);
@@ -1011,4 +1064,342 @@ export function getFeedbackRateLimit(ip: string, hours: number = 1): number {
     "SELECT COUNT(*) as count FROM feedback WHERE ip_address = ? AND created_at >= datetime('now', 'localtime', ?)"
   ).get(ip, `-${hours} hours`) as { count: number };
   return result.count;
+}
+
+// ─── Product Promo Helper ────────────────────────────────────────────
+
+export function getEffectivePrice(product: ProductRow): number {
+  if (
+    product.promo_price != null &&
+    product.promo_end_date != null
+  ) {
+    const now = new Date();
+    const end = new Date(product.promo_end_date);
+    if (end > now) {
+      return product.promo_price;
+    }
+  }
+  return product.price;
+}
+
+// ─── Hero Slides ─────────────────────────────────────────────────────
+
+export interface HeroSlideRow {
+  id: string;
+  image: string;
+  title: string;
+  subtitle: string;
+  sort_order: number;
+  is_active: number;
+  created_at: string;
+}
+
+function seedDefaultHeroSlides(): void {
+  const db = getDb();
+  const count = db.prepare("SELECT COUNT(*) as count FROM hero_slides").get() as { count: number };
+  if (count.count > 0) return;
+
+  const insert = db.prepare(
+    `INSERT INTO hero_slides (id, image, title, subtitle, sort_order)
+     VALUES (@id, @image, @title, @subtitle, @sort_order)`
+  );
+
+  const transaction = db.transaction(() => {
+    insert.run({
+      id: "slide-default-1",
+      title: "Elite Performance Fuel",
+      subtitle: "Curated Nutrition for Champions",
+      image: "https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=1200&h=400&fit=crop&q=80",
+      sort_order: 1,
+    });
+    insert.run({
+      id: "slide-default-2",
+      title: "Fresh & Healthy",
+      subtitle: "Good Food, Good Mood",
+      image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=1200&h=400&fit=crop&q=80",
+      sort_order: 2,
+    });
+  });
+
+  transaction();
+}
+
+export function getActiveHeroSlides(): HeroSlideRow[] {
+  const db = getDb();
+  return db
+    .prepare("SELECT * FROM hero_slides WHERE is_active = 1 ORDER BY sort_order ASC, created_at ASC")
+    .all() as HeroSlideRow[];
+}
+
+export function getAllHeroSlides(): HeroSlideRow[] {
+  const db = getDb();
+  return db
+    .prepare("SELECT * FROM hero_slides ORDER BY sort_order ASC, created_at ASC")
+    .all() as HeroSlideRow[];
+}
+
+export function createHeroSlide(slide: {
+  id: string;
+  image: string;
+  title: string;
+  subtitle: string;
+  sort_order?: number;
+}): HeroSlideRow {
+  const db = getDb();
+  const maxOrder = db
+    .prepare("SELECT COALESCE(MAX(sort_order), 0) as max_order FROM hero_slides")
+    .get() as { max_order: number };
+
+  db.prepare(
+    `INSERT INTO hero_slides (id, image, title, subtitle, sort_order)
+     VALUES (@id, @image, @title, @subtitle, @sort_order)`
+  ).run({
+    ...slide,
+    sort_order: slide.sort_order ?? maxOrder.max_order + 1,
+  });
+
+  return db.prepare("SELECT * FROM hero_slides WHERE id = ?").get(slide.id) as HeroSlideRow;
+}
+
+export function updateHeroSlide(
+  id: string,
+  fields: Partial<Pick<HeroSlideRow, "image" | "title" | "subtitle" | "sort_order" | "is_active">>
+): HeroSlideRow | null {
+  const db = getDb();
+  const existing = db.prepare("SELECT * FROM hero_slides WHERE id = ?").get(id) as HeroSlideRow | undefined;
+  if (!existing) return null;
+
+  const updates: string[] = [];
+  const values: Record<string, unknown> = { id };
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (value !== undefined) {
+      updates.push(`${key} = @${key}`);
+      values[key] = value;
+    }
+  }
+
+  if (updates.length === 0) return existing;
+
+  db.prepare(`UPDATE hero_slides SET ${updates.join(", ")} WHERE id = @id`).run(values);
+  return db.prepare("SELECT * FROM hero_slides WHERE id = ?").get(id) as HeroSlideRow;
+}
+
+export function deleteHeroSlide(id: string): boolean {
+  const db = getDb();
+  const result = db.prepare("DELETE FROM hero_slides WHERE id = ?").run(id);
+  return result.changes > 0;
+}
+
+// ─── Product Add-ons ─────────────────────────────────────────────────
+
+export interface ProductAddonRow {
+  id: string;
+  product_id: string;
+  name: string;
+  price: number;
+  is_active: number;
+  sort_order: number;
+  created_at: string;
+}
+
+export function getAddonsForProduct(productId: string): ProductAddonRow[] {
+  const db = getDb();
+  return db
+    .prepare("SELECT * FROM product_addons WHERE product_id = ? AND is_active = 1 ORDER BY sort_order ASC, created_at ASC")
+    .all(productId) as ProductAddonRow[];
+}
+
+export function getAllAddons(): ProductAddonRow[] {
+  const db = getDb();
+  return db
+    .prepare("SELECT * FROM product_addons ORDER BY product_id, sort_order ASC, created_at ASC")
+    .all() as ProductAddonRow[];
+}
+
+export function getAddon(id: string): ProductAddonRow | null {
+  const db = getDb();
+  const row = db.prepare("SELECT * FROM product_addons WHERE id = ?").get(id) as ProductAddonRow | undefined;
+  return row ?? null;
+}
+
+export function createAddon(addon: {
+  id: string;
+  product_id: string;
+  name: string;
+  price: number;
+  sort_order?: number;
+}): ProductAddonRow {
+  const db = getDb();
+  const maxOrder = db
+    .prepare("SELECT COALESCE(MAX(sort_order), 0) as max_order FROM product_addons WHERE product_id = ?")
+    .get(addon.product_id) as { max_order: number };
+
+  db.prepare(
+    `INSERT INTO product_addons (id, product_id, name, price, sort_order)
+     VALUES (@id, @product_id, @name, @price, @sort_order)`
+  ).run({
+    ...addon,
+    sort_order: addon.sort_order ?? maxOrder.max_order + 1,
+  });
+
+  return db.prepare("SELECT * FROM product_addons WHERE id = ?").get(addon.id) as ProductAddonRow;
+}
+
+export function updateAddon(
+  id: string,
+  fields: Partial<Pick<ProductAddonRow, "name" | "price" | "is_active" | "sort_order">>
+): ProductAddonRow | null {
+  const db = getDb();
+  const existing = getAddon(id);
+  if (!existing) return null;
+
+  const updates: string[] = [];
+  const values: Record<string, unknown> = { id };
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (value !== undefined) {
+      updates.push(`${key} = @${key}`);
+      values[key] = value;
+    }
+  }
+
+  if (updates.length === 0) return existing;
+
+  db.prepare(`UPDATE product_addons SET ${updates.join(", ")} WHERE id = @id`).run(values);
+  return getAddon(id);
+}
+
+export function deleteAddon(id: string): boolean {
+  const db = getDb();
+  const result = db.prepare("DELETE FROM product_addons WHERE id = ?").run(id);
+  return result.changes > 0;
+}
+
+export function getAddonsByIds(ids: string[]): ProductAddonRow[] {
+  if (ids.length === 0) return [];
+  const db = getDb();
+  const placeholders = ids.map(() => "?").join(", ");
+  return db
+    .prepare(`SELECT * FROM product_addons WHERE id IN (${placeholders})`)
+    .all(...ids) as ProductAddonRow[];
+}
+
+// ─── Order Item Addons ───────────────────────────────────────────────
+
+export interface OrderItemAddonRow {
+  id: number;
+  order_item_id: number;
+  addon_name: string;
+  addon_price: number;
+  quantity: number;
+}
+
+export function createOrderItemAddons(
+  orderItemId: number,
+  addons: Array<{ addon_name: string; addon_price: number; quantity: number }>
+): void {
+  const db = getDb();
+  const insert = db.prepare(
+    `INSERT INTO order_item_addons (order_item_id, addon_name, addon_price, quantity)
+     VALUES (?, ?, ?, ?)`
+  );
+  for (const a of addons) {
+    insert.run(orderItemId, a.addon_name, a.addon_price, a.quantity);
+  }
+}
+
+export function getOrderItemAddons(orderItemIds: number[]): OrderItemAddonRow[] {
+  if (orderItemIds.length === 0) return [];
+  const db = getDb();
+  const placeholders = orderItemIds.map(() => "?").join(", ");
+  return db
+    .prepare(`SELECT * FROM order_item_addons WHERE order_item_id IN (${placeholders})`)
+    .all(...orderItemIds) as OrderItemAddonRow[];
+}
+
+// ─── Partners ────────────────────────────────────────────────────────
+
+export interface PartnerRow {
+  id: string;
+  name: string;
+  logo_url: string;
+  link_url: string;
+  sort_order: number;
+  is_active: number;
+  created_at: string;
+}
+
+export function getActivePartners(): PartnerRow[] {
+  const db = getDb();
+  return db
+    .prepare("SELECT * FROM partners WHERE is_active = 1 ORDER BY sort_order ASC, created_at ASC")
+    .all() as PartnerRow[];
+}
+
+export function getAllPartners(): PartnerRow[] {
+  const db = getDb();
+  return db
+    .prepare("SELECT * FROM partners ORDER BY sort_order ASC, created_at ASC")
+    .all() as PartnerRow[];
+}
+
+export function getPartner(id: string): PartnerRow | null {
+  const db = getDb();
+  const row = db.prepare("SELECT * FROM partners WHERE id = ?").get(id) as PartnerRow | undefined;
+  return row ?? null;
+}
+
+export function createPartner(partner: {
+  id: string;
+  name: string;
+  logo_url: string;
+  link_url?: string;
+  sort_order?: number;
+}): PartnerRow {
+  const db = getDb();
+  const maxOrder = db
+    .prepare("SELECT COALESCE(MAX(sort_order), 0) as max_order FROM partners")
+    .get() as { max_order: number };
+
+  db.prepare(
+    `INSERT INTO partners (id, name, logo_url, link_url, sort_order)
+     VALUES (@id, @name, @logo_url, @link_url, @sort_order)`
+  ).run({
+    ...partner,
+    link_url: partner.link_url ?? "",
+    sort_order: partner.sort_order ?? maxOrder.max_order + 1,
+  });
+
+  return db.prepare("SELECT * FROM partners WHERE id = ?").get(partner.id) as PartnerRow;
+}
+
+export function updatePartner(
+  id: string,
+  fields: Partial<Pick<PartnerRow, "name" | "logo_url" | "link_url" | "sort_order" | "is_active">>
+): PartnerRow | null {
+  const db = getDb();
+  const existing = getPartner(id);
+  if (!existing) return null;
+
+  const updates: string[] = [];
+  const values: Record<string, unknown> = { id };
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (value !== undefined) {
+      updates.push(`${key} = @${key}`);
+      values[key] = value;
+    }
+  }
+
+  if (updates.length === 0) return existing;
+
+  db.prepare(`UPDATE partners SET ${updates.join(", ")} WHERE id = @id`).run(values);
+  return getPartner(id);
+}
+
+export function deletePartner(id: string): boolean {
+  const db = getDb();
+  const result = db.prepare("DELETE FROM partners WHERE id = ?").run(id);
+  return result.changes > 0;
 }

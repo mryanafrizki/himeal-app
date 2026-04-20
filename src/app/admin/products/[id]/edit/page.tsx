@@ -12,6 +12,8 @@ interface Product {
   image: string;
   is_active: number;
   sort_order: number;
+  promo_price: number | null;
+  promo_end_date: string | null;
 }
 
 export default function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
@@ -26,6 +28,11 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+
+  // Promo state
+  const [promoActive, setPromoActive] = useState(false);
+  const [promoPrice, setPromoPrice] = useState("");
+  const [promoEndDate, setPromoEndDate] = useState("");
 
   useEffect(() => {
     const key = sessionStorage.getItem("himeal_admin_key");
@@ -52,6 +59,18 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         setPrice(String(product.price));
         setDescription(product.description);
         setImage(product.image);
+        if (product.promo_price && product.promo_end_date) {
+          setPromoActive(true);
+          setPromoPrice(String(product.promo_price));
+          // Convert ISO date to datetime-local format
+          const endDate = new Date(product.promo_end_date);
+          const localStr = endDate.getFullYear() + "-" +
+            String(endDate.getMonth() + 1).padStart(2, "0") + "-" +
+            String(endDate.getDate()).padStart(2, "0") + "T" +
+            String(endDate.getHours()).padStart(2, "0") + ":" +
+            String(endDate.getMinutes()).padStart(2, "0");
+          setPromoEndDate(localStr);
+        }
       } catch {
         setError("Gagal memuat data produk");
       } finally {
@@ -66,15 +85,25 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     setSaving(true);
 
     try {
+      const body: Record<string, unknown> = {
+        name: name.trim(),
+        price: parseInt(price, 10),
+        description: description.trim(),
+        image: image.trim(),
+      };
+
+      if (promoActive && promoPrice && promoEndDate) {
+        body.promoPrice = parseInt(promoPrice, 10);
+        body.promoEndDate = new Date(promoEndDate).toISOString();
+      } else {
+        body.promoPrice = null;
+        body.promoEndDate = null;
+      }
+
       const res = await fetch(`/api/admin/products/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", "x-admin-key": adminKey },
-        body: JSON.stringify({
-          name: name.trim(),
-          price: parseInt(price, 10),
-          description: description.trim(),
-          image: image.trim(),
-        }),
+        body: JSON.stringify(body),
       });
 
       if (res.status === 401) { router.push("/admin"); return; }
@@ -228,6 +257,91 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
               </div>
             </div>
           )}
+
+          {/* Promo Section */}
+          <div className="space-y-4 pt-4 border-t border-outline-variant/20">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-primary">local_offer</span>
+                <h3 className="font-headline font-bold text-on-surface">Promo</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPromoActive(!promoActive)}
+                className={`relative w-12 h-6 rounded-full transition-colors ${
+                  promoActive ? "bg-primary" : "bg-surface-container-highest"
+                }`}
+              >
+                <span
+                  className={`absolute top-[2px] w-5 h-5 bg-white rounded-full transition-transform ${
+                    promoActive ? "left-[26px]" : "left-[2px]"
+                  }`}
+                />
+              </button>
+            </div>
+
+            <p className="text-xs text-on-surface-variant">
+              {promoActive ? "Promo aktif — harga promo akan ditampilkan ke pelanggan" : "Aktifkan untuk menampilkan harga promo"}
+            </p>
+
+            {promoActive && (
+              <div className="space-y-4 animate-scale-in">
+                {/* Promo Price */}
+                <div className="space-y-2">
+                  <label className="font-label text-xs uppercase tracking-widest text-on-surface-variant font-medium">
+                    Harga Promo (Rp) *
+                  </label>
+                  <input
+                    type="number"
+                    value={promoPrice}
+                    onChange={(e) => setPromoPrice(e.target.value)}
+                    placeholder="15000"
+                    min="0"
+                    step="500"
+                    className="w-full px-4 py-4 bg-surface-container border-none rounded-2xl text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary"
+                  />
+                  {Number(promoPrice) > 0 && (
+                    <p className="text-xs text-primary font-medium">{formatCurrency(Number(promoPrice))}</p>
+                  )}
+                </div>
+
+                {/* Promo End Date */}
+                <div className="space-y-2">
+                  <label className="font-label text-xs uppercase tracking-widest text-on-surface-variant font-medium">
+                    Berakhir Pada *
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={promoEndDate}
+                    onChange={(e) => setPromoEndDate(e.target.value)}
+                    className="w-full px-4 py-4 bg-surface-container border-none rounded-2xl text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+
+                {/* Promo Preview */}
+                {Number(promoPrice) > 0 && priceNum > 0 && (
+                  <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10">
+                    <p className="text-[10px] font-bold text-primary tracking-widest uppercase mb-3">Preview Harga</p>
+                    <div className="flex items-center gap-3">
+                      <span className="text-on-surface-variant line-through text-sm">{formatCurrency(priceNum)}</span>
+                      <span className="text-primary font-headline font-black text-xl">{formatCurrency(Number(promoPrice))}</span>
+                      {priceNum > Number(promoPrice) && (
+                        <span className="text-[10px] bg-error/20 text-error px-2 py-0.5 rounded-full font-bold">
+                          -{Math.round(((priceNum - Number(promoPrice)) / priceNum) * 100)}%
+                        </span>
+                      )}
+                    </div>
+                    {promoEndDate && (
+                      <p className="text-xs text-on-surface-variant mt-2 flex items-center gap-1">
+                        <span className="material-symbols-outlined text-xs">schedule</span>
+                        Berakhir: {new Date(promoEndDate).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {error && (
             <p className="text-sm text-error font-medium">{error}</p>

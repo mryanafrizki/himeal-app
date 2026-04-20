@@ -1,18 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/constants";
+import { celebrate, celebrateSmall } from "@/lib/confetti";
+
+interface CheckoutAddon {
+  id: string;
+  name: string;
+  price: number;
+  qty: number;
+}
+
+interface CheckoutItem {
+  productId: string;
+  name: string;
+  quantity: number;
+  price: number;
+  image: string;
+  notes: string;
+  addons: CheckoutAddon[];
+}
 
 interface CheckoutData {
   orderId: string;
-  items: Array<{
-    name: string;
-    quantity: number;
-    price: number;
-    notes: string;
-  }>;
+  items: CheckoutItem[];
+  orderType: string;
   customerName: string;
   customerPhone: string;
   subtotal: number;
@@ -32,6 +46,16 @@ export default function CheckoutPage() {
   const [editPhone, setEditPhone] = useState("");
   const [editAddress, setEditAddress] = useState("");
 
+  // Task 6: Voucher state
+  const [voucherCode, setVoucherCode] = useState("");
+  const [voucherDiscount, setVoucherDiscount] = useState(0);
+  const [voucherApplied, setVoucherApplied] = useState(false);
+  const [voucherError, setVoucherError] = useState("");
+  const [voucherLoading, setVoucherLoading] = useState(false);
+
+  // Task 10: Confirmation modal
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+
   useEffect(() => {
     const stored = sessionStorage.getItem("himeal_checkout");
     if (!stored) {
@@ -40,7 +64,17 @@ export default function CheckoutPage() {
     }
     try {
       const parsed = JSON.parse(stored);
-      setData(parsed);
+      // Ensure items have notes and addons fields
+      const items = (parsed.items || []).map((item: Record<string, unknown>) => ({
+        productId: item.productId || "",
+        name: item.name || "",
+        quantity: item.quantity || 1,
+        price: item.price || 0,
+        image: item.image || "",
+        notes: item.notes || "",
+        addons: Array.isArray(item.addons) ? item.addons : [],
+      }));
+      setData({ ...parsed, items });
       setEditName(parsed.customerName || "");
       setEditPhone(parsed.customerPhone || "");
       setEditAddress(parsed.address || "");
@@ -48,6 +82,65 @@ export default function CheckoutPage() {
       router.replace("/");
     }
   }, [router]);
+
+  // Task 1: Sync changes back to sessionStorage
+  const syncStorage = useCallback((updated: CheckoutData) => {
+    sessionStorage.setItem("himeal_checkout", JSON.stringify(updated));
+    // Also sync cart
+    const cartObj: Record<string, unknown> = {};
+    updated.items.forEach((item) => {
+      cartObj[item.productId] = {
+        productId: item.productId,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        image: item.image,
+        addons: item.addons,
+      };
+    });
+    sessionStorage.setItem("himeal_cart", JSON.stringify(cartObj));
+  }, []);
+
+  // Task 1: Recalculate subtotal/total from items
+  const recalcTotals = useCallback((items: CheckoutItem[], currentData: CheckoutData): CheckoutData => {
+    const subtotal = items.reduce((sum, item) => {
+      const addonTotal = item.addons.reduce((a, ad) => a + ad.price, 0);
+      return sum + (item.price + addonTotal) * item.quantity;
+    }, 0);
+    const total = subtotal + currentData.deliveryFee - voucherDiscount;
+    return { ...currentData, items, subtotal, total: Math.max(0, total) };
+  }, [voucherDiscount]);
+
+  // Task 1: Update item quantity
+  const updateItemQty = useCallback((index: number, delta: number) => {
+    if (!data) return;
+    const items = [...data.items];
+    const newQty = items[index].quantity + delta;
+    if (newQty <= 0) {
+      items.splice(index, 1);
+    } else {
+      items[index] = { ...items[index], quantity: newQty };
+    }
+    if (items.length === 0) {
+      sessionStorage.removeItem("himeal_checkout");
+      sessionStorage.setItem("himeal_cart", "{}");
+      router.replace("/");
+      return;
+    }
+    const updated = recalcTotals(items, data);
+    setData(updated);
+    syncStorage(updated);
+  }, [data, recalcTotals, syncStorage, router]);
+
+  // Task 4b: Update item notes
+  const updateItemNotes = useCallback((index: number, notes: string) => {
+    if (!data) return;
+    const items = [...data.items];
+    items[index] = { ...items[index], notes };
+    const updated = { ...data, items };
+    setData(updated);
+    syncStorage(updated);
+  }, [data, syncStorage]);
 
   const saveField = (field: string) => {
     if (!data) return;
@@ -57,7 +150,6 @@ export default function CheckoutPage() {
     if (field === "address") updated.address = editAddress.trim();
     setData(updated);
     sessionStorage.setItem("himeal_checkout", JSON.stringify(updated));
-    // Also update customer data in sessionStorage so going back preserves it
     try {
       const savedCustomer = sessionStorage.getItem("himeal_customer");
       if (savedCustomer) {
@@ -72,15 +164,57 @@ export default function CheckoutPage() {
     toast.success("Data diperbarui");
   };
 
-  const handlePay = async () => {
+  // Task 6: Apply voucher
+  const applyVoucher = async () => {
+    if (!data || !voucherCode.trim()) return;
+    setVoucherLoading(true);
+    setVoucherError("");
+    try {
+      const res = await fetch("/api/voucher/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: voucherCode.trim(), orderTotal: data.subtotal }),
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        setVoucherError(result.error || "Kode voucher tidak valid");
+        setVoucherApplied(false);
+        setVoucherDiscount(0);
+        return;
+      }
+      const discount = result.discount || 0;
+      setVoucherDiscount(discount);
+      setVoucherApplied(true);
+      const newTotal = Math.max(0, data.subtotal + data.deliveryFee - discount);
+      setData({ ...data, total: newTotal });
+      celebrateSmall();
+      toast.success(`Voucher berhasil! Diskon ${formatCurrency(discount)}`);
+    } catch {
+      setVoucherError("Gagal memvalidasi voucher");
+    } finally {
+      setVoucherLoading(false);
+    }
+  };
+
+  // Task 10: Show confirmation modal before payment
+  const handlePayClick = () => {
+    setShowConfirmModal(true);
+  };
+
+  // Task 10: Confirm and proceed with payment
+  const handleConfirmPay = async () => {
     if (!data) return;
+    setShowConfirmModal(false);
     setIsProcessing(true);
 
     try {
       const res = await fetch("/api/payment/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: data.orderId }),
+        body: JSON.stringify({
+          orderId: data.orderId,
+          voucherCode: voucherApplied ? voucherCode.trim() : undefined,
+        }),
       });
 
       const result = await res.json();
@@ -89,6 +223,7 @@ export default function CheckoutPage() {
         return;
       }
 
+      celebrate();
       sessionStorage.removeItem("himeal_checkout");
       router.push(`/payment/${data.orderId}`);
     } catch {
@@ -97,6 +232,9 @@ export default function CheckoutPage() {
       setIsProcessing(false);
     }
   };
+
+  const isTakeaway = data?.orderType === "takeaway";
+  const displayTotal = data ? Math.max(0, data.subtotal + data.deliveryFee - voucherDiscount) : 0;
 
   if (!data) {
     return (
@@ -164,15 +302,19 @@ export default function CheckoutPage() {
           </div>
         </section>
 
-        {/* Delivery Address Card - Inline Editable */}
+        {/* Task 2: Address / Takeaway label */}
         <section className="mb-10 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-          <h2 className="font-headline text-on-surface-variant text-xs uppercase tracking-widest mb-4">Alamat Pengantaran</h2>
+          <h2 className="font-headline text-on-surface-variant text-xs uppercase tracking-widest mb-4">
+            {isTakeaway ? "Takeaway - Ambil di lokasi HiMeal" : "Alamat Pengantaran"}
+          </h2>
           <div className="botanical-card rounded-xl p-6 flex items-start gap-5">
             <div className="bg-primary-container/20 p-3 rounded-full shrink-0">
-              <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>location_on</span>
+              <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>
+                {isTakeaway ? "storefront" : "location_on"}
+              </span>
             </div>
             <div className="flex-grow">
-              {editingField === "address" ? (
+              {editingField === "address" && !isTakeaway ? (
                 <div className="space-y-2">
                   <textarea value={editAddress} onChange={(e) => setEditAddress(e.target.value)} rows={2} className="w-full px-3 py-2 bg-surface-container border-none rounded-lg text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary resize-none" autoFocus />
                   <div className="flex gap-2">
@@ -186,7 +328,8 @@ export default function CheckoutPage() {
                   {data.addressNotes && (
                     <p className="text-on-surface-variant text-sm mt-1">{data.addressNotes}</p>
                   )}
-                  {data.distanceKm > 0 && (
+                  {/* Task 2: Hide distance for takeaway */}
+                  {!isTakeaway && data.distanceKm > 0 && (
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-on-surface-variant text-sm">{data.distanceKm} km via jalan</span>
                     </div>
@@ -194,7 +337,7 @@ export default function CheckoutPage() {
                 </>
               )}
             </div>
-            {editingField !== "address" && (
+            {editingField !== "address" && !isTakeaway && (
               <button
                 onClick={() => { setEditAddress(data.address); setEditingField("address"); }}
                 className="text-primary font-headline font-bold text-xs uppercase tracking-wider hover:opacity-80 transition-opacity shrink-0"
@@ -205,29 +348,61 @@ export default function CheckoutPage() {
           </div>
         </section>
 
-        {/* Order Items */}
+        {/* Task 1+3+4b: Order Items with qty +/-, product image, notes */}
         <section className="mb-10">
           <h2 className="font-headline text-on-surface-variant text-xs uppercase tracking-widest mb-4 animate-fade-in-up" style={{ animationDelay: '200ms' }}>Your Selection</h2>
           <div className="space-y-4">
             {data.items.map((item, i) => (
-              <div key={i} className="botanical-card rounded-xl overflow-hidden flex items-center p-4 gap-6 group animate-slide-in-right" style={{ animationDelay: `${300 + i * 100}ms` }}>
-                <div className="relative h-20 w-20 flex-shrink-0 rounded-lg overflow-hidden bg-surface-container">
-                  <div className="h-full w-full bg-gradient-to-br from-primary-container/20 to-surface-container" />
-                </div>
-                <div className="flex-grow">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-headline font-bold text-lg text-on-surface">{item.name}</h3>
-                      <p className="text-on-surface-variant text-sm font-medium">
-                        {item.notes || "Standard preparation"}
-                      </p>
+              <div key={`${item.productId}-${i}`} className="botanical-card rounded-xl overflow-hidden p-4 space-y-3 animate-slide-in-right" style={{ animationDelay: `${300 + i * 100}ms` }}>
+                <div className="flex items-center gap-4">
+                  {/* Task 3: Product image */}
+                  <div className="relative h-20 w-20 flex-shrink-0 rounded-lg overflow-hidden bg-surface-container">
+                    {item.image ? (
+                      <img src={item.image} alt={item.name} className="h-full w-full object-cover" loading="lazy" />
+                    ) : (
+                      <div className="h-full w-full bg-gradient-to-br from-primary-container/20 to-surface-container" />
+                    )}
+                  </div>
+                  <div className="flex-grow min-w-0">
+                    <div className="flex justify-between items-start gap-2">
+                      <h3 className="font-headline font-bold text-on-surface truncate">{item.name}</h3>
+                      <span className="font-headline font-bold text-on-surface shrink-0">
+                        {formatCurrency((item.price + item.addons.reduce((s, a) => s + a.price, 0)) * item.quantity)}
+                      </span>
                     </div>
-                    <span className="font-headline font-bold text-on-surface">{formatCurrency(item.price * item.quantity)}</span>
-                  </div>
-                  <div className="mt-2 flex items-center text-primary-fixed-dim text-xs font-bold uppercase tracking-tighter">
-                    <span>Qty: {item.quantity}</span>
+                    {item.addons.length > 0 && (
+                      <p className="text-[11px] text-on-surface-variant mt-0.5">
+                        + {item.addons.map((a) => a.name).join(", ")}
+                      </p>
+                    )}
+                    {/* Task 1: Qty +/- controls */}
+                    <div className="mt-2 flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => updateItemQty(i, -1)}
+                        className="w-7 h-7 flex items-center justify-center rounded-full bg-surface-container-highest text-on-surface-variant active:scale-90 transition-transform"
+                      >
+                        <span className="material-symbols-outlined text-sm">remove</span>
+                      </button>
+                      <span className="px-3 font-bold text-primary text-sm">{item.quantity}</span>
+                      <button
+                        type="button"
+                        onClick={() => updateItemQty(i, 1)}
+                        className="w-7 h-7 flex items-center justify-center rounded-full bg-surface-container-highest text-on-surface active:scale-90 transition-transform"
+                      >
+                        <span className="material-symbols-outlined text-sm">add</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
+                {/* Task 4b: Notes input per item */}
+                <textarea
+                  value={item.notes}
+                  onChange={(e) => updateItemNotes(i, e.target.value)}
+                  placeholder="Catatan: tanpa bawang, extra sambal..."
+                  rows={1}
+                  className="w-full bg-surface-container-low border-none rounded-xl text-xs py-2 px-3 text-on-surface placeholder:text-outline focus:ring-1 focus:ring-primary resize-none"
+                />
               </div>
             ))}
           </div>
@@ -244,6 +419,51 @@ export default function CheckoutPage() {
           </button>
         </section>
 
+        {/* Task 6: Voucher Input */}
+        <section className="mb-6 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
+          <div className="botanical-card rounded-xl p-5 space-y-3">
+            <p className="text-sm font-medium text-on-surface">Punya kode voucher?</p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={voucherCode}
+                onChange={(e) => { setVoucherCode(e.target.value.toUpperCase()); setVoucherError(""); }}
+                placeholder="Masukkan kode"
+                disabled={voucherApplied}
+                className="flex-1 px-4 py-3 bg-surface-container border-none rounded-xl text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary disabled:opacity-50"
+              />
+              {!voucherApplied ? (
+                <button
+                  onClick={applyVoucher}
+                  disabled={voucherLoading || !voucherCode.trim()}
+                  className="px-5 py-3 bg-primary-container text-on-primary-container rounded-xl text-sm font-bold uppercase tracking-wider active:scale-95 transition-all disabled:opacity-50"
+                >
+                  {voucherLoading ? "..." : "Terapkan"}
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    setVoucherApplied(false);
+                    setVoucherDiscount(0);
+                    setVoucherCode("");
+                    if (data) {
+                      const updated = { ...data, total: data.subtotal + data.deliveryFee };
+                      setData(updated);
+                    }
+                  }}
+                  className="px-5 py-3 bg-error/20 text-error rounded-xl text-sm font-bold uppercase tracking-wider active:scale-95 transition-all"
+                >
+                  Hapus
+                </button>
+              )}
+            </div>
+            {voucherError && <p className="text-xs text-error font-medium">{voucherError}</p>}
+            {voucherApplied && (
+              <p className="text-xs text-primary font-semibold">Voucher diterapkan! Diskon {formatCurrency(voucherDiscount)}</p>
+            )}
+          </div>
+        </section>
+
         {/* Pricing Summary Card */}
         <section className="mb-20 animate-fade-in-up" style={{ animationDelay: '500ms' }}>
           <div className="botanical-card rounded-xl p-8 space-y-4">
@@ -251,6 +471,12 @@ export default function CheckoutPage() {
               <span className="font-label text-sm uppercase tracking-wider">Subtotal</span>
               <span className="font-headline font-medium text-on-surface">{formatCurrency(data.subtotal)}</span>
             </div>
+            {voucherApplied && voucherDiscount > 0 && (
+              <div className="flex justify-between items-center">
+                <span className="font-label text-sm uppercase tracking-wider text-tertiary">Diskon Voucher</span>
+                <span className="font-headline font-bold text-tertiary">-{formatCurrency(voucherDiscount)}</span>
+              </div>
+            )}
             <div className="flex justify-between items-center">
               <span className="font-label text-sm uppercase tracking-wider text-on-surface-variant">Ongkir (Shipping)</span>
               <span className="font-headline font-bold text-primary-container uppercase">
@@ -260,7 +486,9 @@ export default function CheckoutPage() {
             <div className="pt-6 border-t border-outline-variant/30 flex justify-between items-end">
               <div>
                 <span className="font-label text-xs uppercase tracking-[0.2em] text-on-surface-variant block mb-1">Total Amount</span>
-                <span className="font-headline font-black text-4xl text-primary tracking-tighter animate-fade-in-up" style={{ animationDelay: '700ms' }}>{formatCurrency(data.total)}</span>
+                <span className="font-headline font-black text-4xl text-primary tracking-tighter animate-fade-in-up" style={{ animationDelay: '700ms' }}>
+                  {formatCurrency(displayTotal)}
+                </span>
               </div>
               <div className="text-right">
                 <span className="text-on-surface-variant text-[10px] uppercase tracking-widest block">Incl. Tax (11%)</span>
@@ -273,7 +501,7 @@ export default function CheckoutPage() {
         <section className="fixed bottom-0 left-0 w-full bg-background/95 backdrop-blur-md p-6 border-t border-outline-variant/10 z-50">
           <div className="max-w-3xl mx-auto">
             <button
-              onClick={handlePay}
+              onClick={handlePayClick}
               disabled={isProcessing}
               className="w-full bg-gradient-to-br from-primary to-primary-container text-on-primary font-headline font-extrabold text-lg py-5 rounded-full shadow-[0_20px_40px_rgba(91,219,111,0.2)] hover:scale-[1.02] active:scale-95 transition-all duration-300 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed animate-pulse-glow"
             >
@@ -283,6 +511,83 @@ export default function CheckoutPage() {
           </div>
         </section>
       </main>
+
+      {/* Task 10: Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowConfirmModal(false)} />
+          <div className="relative bg-surface-container rounded-3xl p-6 max-w-md w-full max-h-[85vh] overflow-y-auto border border-primary/12 shadow-2xl animate-scale-in">
+            <h3 className="font-headline font-bold text-xl text-on-surface mb-6">Konfirmasi Pesanan</h3>
+
+            {/* Customer info */}
+            <div className="space-y-2 mb-4">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="material-symbols-outlined text-primary text-base" style={{ fontVariationSettings: "'FILL' 1" }}>person</span>
+                <span className="text-on-surface font-medium">{data.customerName}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="material-symbols-outlined text-primary text-base" style={{ fontVariationSettings: "'FILL' 1" }}>phone</span>
+                <span className="text-on-surface-variant">{data.customerPhone}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="material-symbols-outlined text-primary text-base" style={{ fontVariationSettings: "'FILL' 1" }}>
+                  {isTakeaway ? "storefront" : "location_on"}
+                </span>
+                <span className="text-on-surface-variant">{isTakeaway ? "Takeaway" : data.address}</span>
+              </div>
+            </div>
+
+            {/* Items */}
+            <div className="border-t border-outline-variant/20 pt-4 space-y-2 mb-4">
+              {data.items.map((item, i) => (
+                <div key={i} className="flex justify-between text-sm">
+                  <span className="text-on-surface">{item.quantity}x {item.name}</span>
+                  <span className="text-on-surface font-medium">{formatCurrency((item.price + item.addons.reduce((s, a) => s + a.price, 0)) * item.quantity)}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Totals */}
+            <div className="border-t border-outline-variant/20 pt-4 space-y-2 mb-6">
+              <div className="flex justify-between text-sm text-on-surface-variant">
+                <span>Subtotal</span>
+                <span>{formatCurrency(data.subtotal)}</span>
+              </div>
+              {voucherApplied && voucherDiscount > 0 && (
+                <div className="flex justify-between text-sm text-tertiary">
+                  <span>Diskon</span>
+                  <span>-{formatCurrency(voucherDiscount)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-sm text-on-surface-variant">
+                <span>Ongkir</span>
+                <span>{data.deliveryFee === 0 ? "GRATIS" : formatCurrency(data.deliveryFee)}</span>
+              </div>
+              <div className="flex justify-between font-headline font-bold text-lg text-primary pt-2 border-t border-outline-variant/20">
+                <span>Total</span>
+                <span>{formatCurrency(displayTotal)}</span>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                className="flex-1 py-3.5 rounded-full border border-outline-variant/30 text-on-surface-variant font-headline font-bold text-sm uppercase tracking-wider hover:bg-surface-container-high transition-colors active:scale-95"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleConfirmPay}
+                disabled={isProcessing}
+                className="flex-1 py-3.5 rounded-full bg-primary text-on-primary font-headline font-bold text-sm uppercase tracking-wider shadow-lg hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+              >
+                {isProcessing ? "..." : "Konfirmasi & Bayar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="bg-surface-container-low rounded-t-[2rem] mt-20">

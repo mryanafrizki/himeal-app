@@ -1,29 +1,78 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { MenuItem } from "@/lib/constants";
 import { formatCurrency } from "@/lib/constants";
 import { toast } from "sonner";
 
+export interface Addon {
+  id: string;
+  name: string;
+  price: number;
+}
+
 interface MenuCardProps {
-  item: MenuItem & { is_out_of_stock?: number; max_order_qty?: number };
+  item: MenuItem & {
+    is_out_of_stock?: number;
+    max_order_qty?: number;
+    promo_price?: number | null;
+    promo_end_date?: string | null;
+  };
   quantity: number;
-  notes: string;
   onQuantityChange: (qty: number) => void;
-  onNotesChange: (notes: string) => void;
+  selectedAddons?: Addon[];
+  onAddonsChange?: (addons: Addon[]) => void;
+}
+
+function PromoCountdown({ endDate }: { endDate: string }) {
+  const [timeLeft, setTimeLeft] = useState("");
+
+  useEffect(() => {
+    const calc = () => {
+      const diff = new Date(endDate).getTime() - Date.now();
+      if (diff <= 0) { setTimeLeft(""); return; }
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      setTimeLeft(`${h > 0 ? `${h}j ` : ""}${m}m ${s}d`);
+    };
+    calc();
+    const id = setInterval(calc, 1000);
+    return () => clearInterval(id);
+  }, [endDate]);
+
+  if (!timeLeft) return null;
+  return (
+    <span className="text-[10px] text-tertiary font-bold tracking-wide">
+      ⏳ {timeLeft}
+    </span>
+  );
 }
 
 export default function MenuCard({
   item,
   quantity,
-  notes,
   onQuantityChange,
-  onNotesChange,
+  selectedAddons = [],
+  onAddonsChange,
 }: MenuCardProps) {
-  const [showNotes, setShowNotes] = useState(false);
-  const isActive = quantity > 0;
+  const [addons, setAddons] = useState<Addon[]>([]);
   const isOutOfStock = item.is_out_of_stock === 1;
   const maxQty = item.max_order_qty && item.max_order_qty > 0 ? item.max_order_qty : 0;
+
+  // Promo logic
+  const hasPromo = item.promo_price != null
+    && item.promo_end_date
+    && new Date(item.promo_end_date).getTime() > Date.now();
+  const displayPrice = hasPromo ? item.promo_price! : item.price;
+
+  // Fetch addons per product
+  useEffect(() => {
+    fetch(`/api/products/${item.id}/addons`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data: Addon[]) => setAddons(data))
+      .catch(() => {});
+  }, [item.id]);
 
   const handleIncrement = () => {
     if (isOutOfStock) return;
@@ -40,6 +89,16 @@ export default function MenuCard({
     onQuantityChange(quantity - 1);
   };
 
+  const toggleAddon = (addon: Addon) => {
+    if (!onAddonsChange) return;
+    const exists = selectedAddons.find((a) => a.id === addon.id);
+    if (exists) {
+      onAddonsChange(selectedAddons.filter((a) => a.id !== addon.id));
+    } else {
+      onAddonsChange([...selectedAddons, addon]);
+    }
+  };
+
   return (
     <div className={`bg-surface-container border border-primary/12 rounded-[2rem] p-5 space-y-4 shadow-xl relative overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-primary/10 ${
       isOutOfStock ? "opacity-60" : ""
@@ -47,6 +106,13 @@ export default function MenuCard({
       {/* Out of stock overlay */}
       {isOutOfStock && (
         <div className="absolute inset-0 z-20 pointer-events-none" />
+      )}
+
+      {/* Promo badge */}
+      {hasPromo && (
+        <div className="absolute top-3 right-3 z-10 bg-tertiary text-on-tertiary text-[10px] font-headline font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-lg animate-bounce-in">
+          PROMO
+        </div>
       )}
 
       {/* Image */}
@@ -57,7 +123,6 @@ export default function MenuCard({
           className={`w-full h-full object-cover ${isOutOfStock ? "grayscale" : ""}`}
           loading="lazy"
         />
-        {/* Out of stock badge */}
         {isOutOfStock && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/40">
             <span className="bg-error-container text-on-error-container text-sm font-headline font-bold px-4 py-1.5 rounded-full uppercase tracking-wider">
@@ -71,14 +136,55 @@ export default function MenuCard({
       <div className="space-y-2">
         <div className="flex justify-between items-start">
           <h4 className="text-xl font-headline font-bold text-on-surface">{item.name}</h4>
-          <span className="text-lg font-headline font-black text-primary">{formatCurrency(item.price)}</span>
+          <div className="text-right">
+            {hasPromo && (
+              <span className="text-sm text-on-surface-variant line-through block">
+                {formatCurrency(item.price)}
+              </span>
+            )}
+            <span className="text-lg font-headline font-black text-primary">
+              {formatCurrency(displayPrice)}
+            </span>
+          </div>
         </div>
         <p className="text-sm text-on-surface-variant leading-relaxed">{item.description}</p>
+        {hasPromo && item.promo_end_date && (
+          <PromoCountdown endDate={item.promo_end_date} />
+        )}
       </div>
 
-      {/* Quantity controls + Notes input */}
+      {/* Addons */}
+      {addons.length > 0 && quantity > 0 && (
+        <div className="space-y-2 pt-1">
+          <span className="text-[10px] font-label uppercase tracking-widest text-on-surface-variant font-medium">Add-ons</span>
+          <div className="flex flex-wrap gap-2">
+            {addons.map((addon) => {
+              const selected = selectedAddons.some((a) => a.id === addon.id);
+              return (
+                <button
+                  key={addon.id}
+                  type="button"
+                  onClick={() => toggleAddon(addon)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all active:scale-95 ${
+                    selected
+                      ? "bg-primary-container text-on-primary-container"
+                      : "bg-surface-container-highest text-on-surface-variant hover:text-on-surface"
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: selected ? "'FILL' 1" : "'FILL' 0" }}>
+                    {selected ? "check_circle" : "add_circle"}
+                  </span>
+                  {addon.name} +{formatCurrency(addon.price)}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Quantity controls - no notes here, notes moved to checkout */}
       {!isOutOfStock && (
-        <div className="pt-2 flex items-center justify-between gap-4">
+        <div className="pt-2 flex items-center gap-4">
           <div className="flex items-center bg-surface-container-highest rounded-full px-2 py-1">
             <button
               type="button"
@@ -108,15 +214,11 @@ export default function MenuCard({
               <span className="material-symbols-outlined text-sm">add</span>
             </button>
           </div>
-          <div className="flex-1">
-            <input
-              type="text"
-              value={notes}
-              onChange={(e) => onNotesChange(e.target.value)}
-              className="w-full bg-surface-container-low border-none rounded-xl text-xs py-2 px-3 text-on-surface placeholder:text-outline focus:ring-1 focus:ring-primary"
-              placeholder={isActive ? "Notes (e.g. No onions)" : "Notes"}
-            />
-          </div>
+          {quantity > 0 && (
+            <span className="text-xs text-on-surface-variant font-medium">
+              = {formatCurrency(displayPrice * quantity)}
+            </span>
+          )}
         </div>
       )}
     </div>

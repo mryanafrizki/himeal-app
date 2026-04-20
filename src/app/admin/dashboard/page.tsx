@@ -273,6 +273,27 @@ export default function AdminDashboardPage() {
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <button
+              onClick={() => router.push("/admin/hero-slides")}
+              className="flex items-center gap-1 text-xs text-on-surface-variant hover:text-primary transition-colors px-2 py-1.5 rounded-lg hover:bg-surface-container"
+            >
+              <span className="material-symbols-outlined text-base">slideshow</span>
+              <span className="hidden sm:inline">Slides</span>
+            </button>
+            <button
+              onClick={() => router.push("/admin/addons")}
+              className="flex items-center gap-1 text-xs text-on-surface-variant hover:text-primary transition-colors px-2 py-1.5 rounded-lg hover:bg-surface-container"
+            >
+              <span className="material-symbols-outlined text-base">add_circle</span>
+              <span className="hidden sm:inline">Add-ons</span>
+            </button>
+            <button
+              onClick={() => router.push("/admin/partners")}
+              className="flex items-center gap-1 text-xs text-on-surface-variant hover:text-primary transition-colors px-2 py-1.5 rounded-lg hover:bg-surface-container"
+            >
+              <span className="material-symbols-outlined text-base">handshake</span>
+              <span className="hidden sm:inline">Partners</span>
+            </button>
+            <button
               onClick={() => router.push("/admin/vouchers")}
               className="flex items-center gap-1 text-xs text-on-surface-variant hover:text-primary transition-colors px-2 py-1.5 rounded-lg hover:bg-surface-container"
             >

@@ -10,6 +10,7 @@ import {
   AVG_DELIVERY_SPEED_KMH,
   type OrderStatus,
 } from "@/lib/constants";
+import { celebrate } from "@/lib/confetti";
 import OrderTracker from "@/components/OrderTracker";
 import WhatsAppButton from "@/components/WhatsAppButton";
 
@@ -58,6 +59,7 @@ export default function OrderTrackingPage() {
   const [loading, setLoading] = useState(true);
   const [estimatedMinutes, setEstimatedMinutes] = useState<number | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const prevStatusRef = useRef<string | null>(null);
 
   // Chat state
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -82,6 +84,11 @@ export default function OrderTrackingPage() {
         return;
       }
       const data: OrderData = await res.json();
+      // Fire confetti when order transitions to delivered
+      if (data.order_status === "delivered" && prevStatusRef.current && prevStatusRef.current !== "delivered") {
+        celebrate();
+      }
+      prevStatusRef.current = data.order_status;
       setOrder(data);
 
       // Calculate estimated time

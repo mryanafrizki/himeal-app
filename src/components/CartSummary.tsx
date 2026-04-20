@@ -1,13 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { formatCurrency } from "@/lib/constants";
+
+interface CartAddon {
+  id: string;
+  name: string;
+  price: number;
+}
 
 interface CartItem {
   name: string;
   quantity: number;
   price: number;
-  notes: string;
+  addons?: CartAddon[];
 }
 
 interface CartSummaryProps {
@@ -27,6 +33,42 @@ export default function CartSummary({
 }: CartSummaryProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
+  // Task 11: Swipe-to-dismiss
+  const touchStartY = useRef<number | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (touchStartY.current === null) return;
+    const deltaY = e.touches[0].clientY - touchStartY.current;
+    if (deltaY > 0 && panelRef.current) {
+      panelRef.current.style.transform = `translateY(${deltaY}px)`;
+      panelRef.current.style.transition = "none";
+    }
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (touchStartY.current === null || !panelRef.current) return;
+    const deltaY = e.changedTouches[0].clientY - touchStartY.current;
+    panelRef.current.style.transition = "transform 0.3s ease";
+    if (deltaY > 80) {
+      panelRef.current.style.transform = `translateY(100%)`;
+      setTimeout(() => {
+        setIsExpanded(false);
+        if (panelRef.current) {
+          panelRef.current.style.transform = "";
+          panelRef.current.style.transition = "";
+        }
+      }, 300);
+    } else {
+      panelRef.current.style.transform = "translateY(0)";
+    }
+    touchStartY.current = null;
+  }, []);
+
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const total = subtotal + deliveryFee;
 
@@ -44,10 +86,16 @@ export default function CartSummary({
           />
 
           {/* Panel */}
-          <div className="relative mx-auto max-w-lg rounded-t-[2rem] border border-b-0 border-primary/12 bg-surface-container shadow-2xl shadow-black/50">
-            {/* Handle */}
-            <div className="flex justify-center py-3">
-              <div className="h-1 w-10 rounded-full bg-outline-variant" />
+          <div
+            ref={panelRef}
+            className="relative mx-auto max-w-lg rounded-t-[2rem] border border-b-0 border-primary/12 bg-surface-container shadow-2xl shadow-black/50"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
+            {/* Drag handle */}
+            <div className="flex justify-center py-3 cursor-grab active:cursor-grabbing">
+              <div className="h-1.5 w-12 rounded-full bg-outline-variant" />
             </div>
 
             <div className="max-h-[50vh] overflow-y-auto px-5 pb-2">
@@ -71,14 +119,16 @@ export default function CartSummary({
                           {item.name}
                         </span>
                       </div>
-                      {item.notes && (
+                      {item.addons && item.addons.length > 0 && (
                         <p className="mt-0.5 pl-8 text-[11px] text-on-surface-variant">
-                          {item.notes}
+                          + {item.addons.map((a) => a.name).join(", ")}
                         </p>
                       )}
                     </div>
                     <span className="shrink-0 text-sm font-headline font-medium text-on-surface">
-                      {formatCurrency(item.price * item.quantity)}
+                      {formatCurrency(
+                        (item.price + (item.addons?.reduce((s, a) => s + a.price, 0) || 0)) * item.quantity
+                      )}
                     </span>
                   </div>
                 ))}
@@ -122,7 +172,7 @@ export default function CartSummary({
         </>
       )}
 
-      {/* Collapsed bar - matches Stitch floating cart */}
+      {/* Collapsed bar */}
       {!isExpanded && (
         <div className="px-4 pb-8 pt-4 bg-gradient-to-t from-background to-transparent">
           <div className="max-w-md mx-auto bg-surface-container/90 backdrop-blur-2xl rounded-full p-2 flex items-center justify-between shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-outline-variant/10">

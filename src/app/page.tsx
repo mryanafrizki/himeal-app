@@ -8,17 +8,62 @@ import {
   calculateRoadDistance,
   calculateDeliveryFee,
 } from "@/lib/delivery";
-import MenuCard from "@/components/MenuCard";
+import MenuCard, { type Addon } from "@/components/MenuCard";
 import AddressSearch from "@/components/AddressSearch";
 import CartSummary from "@/components/CartSummary";
 import DeliveryMap from "@/components/DeliveryMap";
+
+interface AddonItem {
+  id: string;
+  name: string;
+  price: number;
+  qty?: number;
+}
 
 interface CartItem {
   productId: string;
   name: string;
   price: number;
   quantity: number;
-  notes: string;
+  image: string;
+  addons: AddonItem[];
+}
+
+interface HeroSlide {
+  id: string;
+  image: string;
+  title: string;
+  subtitle: string;
+}
+
+interface Partner {
+  id: string;
+  name: string;
+  logo_url: string;
+  link_url?: string;
+}
+
+interface CartItem {
+  productId: string;
+  name: string;
+  price: number;
+  quantity: number;
+  image: string;
+  addons: AddonItem[];
+}
+
+interface HeroSlide {
+  id: string;
+  image: string;
+  title: string;
+  subtitle: string;
+}
+
+interface Partner {
+  id: string;
+  name: string;
+  logo_url: string;
+  link_url?: string;
 }
 
 export default function HomePage() {
@@ -39,6 +84,21 @@ export default function HomePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [distanceError, setDistanceError] = useState<string | null>(null);
   const [saveData, setSaveData] = useState(false);
+
+  // #5: Validation errors + refs
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const nameRef = useRef<HTMLInputElement>(null);
+  const phoneRef = useRef<HTMLInputElement>(null);
+  const addressRef = useRef<HTMLDivElement>(null);
+
+  // #7: Hero slides
+  const [heroSlides, setHeroSlides] = useState<HeroSlide[]>([]);
+  const [activeSlide, setActiveSlide] = useState(0);
+  const heroScrollRef = useRef<HTMLDivElement>(null);
+  const heroIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // #13: Partners
+  const [partners, setPartners] = useState<Partner[]>([]);
 
   // FEAT-14: Restore saved customer data from localStorage
   useEffect(() => {
@@ -105,6 +165,7 @@ export default function HomePage() {
     }
   }, [saveData, customerName, customerPhone, address, addressNotes]);
 
+  // Fetch products
   useEffect(() => {
     fetch("/api/products")
       .then((res) => res.json())
@@ -114,6 +175,55 @@ export default function HomePage() {
       })
       .catch(() => toast.error("Gagal memuat menu"))
       .finally(() => setMenuLoading(false));
+  }, []);
+
+  // Task 7: Fetch hero slides
+  useEffect(() => {
+    fetch("/api/hero-slides")
+      .then((res) => res.ok ? res.json() : [])
+      .then((data: HeroSlide[]) => {
+        if (Array.isArray(data) && data.length > 0) setHeroSlides(data);
+      })
+      .catch(() => { /* fallback to static hero */ });
+  }, []);
+
+  // Task 7: Auto-advance hero slider
+  useEffect(() => {
+    if (heroSlides.length <= 1) return;
+    heroIntervalRef.current = setInterval(() => {
+      setActiveSlide((prev) => {
+        const next = (prev + 1) % heroSlides.length;
+        heroScrollRef.current?.children[next]?.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
+        return next;
+      });
+    }, 4000);
+    return () => { if (heroIntervalRef.current) clearInterval(heroIntervalRef.current); };
+  }, [heroSlides.length]);
+
+  // Task 7: Track scroll position for dots
+  useEffect(() => {
+    const el = heroScrollRef.current;
+    if (!el || heroSlides.length <= 1) return;
+    const handleScroll = () => {
+      const scrollLeft = el.scrollLeft;
+      const width = el.clientWidth;
+      const idx = Math.round(scrollLeft / width);
+      setActiveSlide(idx);
+    };
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, [heroSlides.length]);
+
+
+
+  // Task 13: Fetch partners
+  useEffect(() => {
+    fetch("/api/partners")
+      .then((res) => res.ok ? res.json() : [])
+      .then((data: Partner[]) => {
+        if (Array.isArray(data)) setPartners(data);
+      })
+      .catch(() => { /* ignore */ });
   }, []);
 
   const updateQuantity = useCallback((productId: string, quantity: number) => {
@@ -132,18 +242,20 @@ export default function HomePage() {
           name: item.name,
           price: item.price,
           quantity,
-          notes: prev[productId]?.notes || "",
+          image: item.image,
+          addons: prev[productId]?.addons || [],
         },
       };
     });
   }, []);
 
-  const updateNotes = useCallback((productId: string, notes: string) => {
+  // #9: Update addons for a cart item
+  const updateAddons = useCallback((productId: string, addons: Addon[]) => {
     setCart((prev) => {
       if (!prev[productId]) return prev;
       return {
         ...prev,
-        [productId]: { ...prev[productId], notes },
+        [productId]: { ...prev[productId], addons },
       };
     });
   }, []);
@@ -178,7 +290,6 @@ export default function HomePage() {
         setSelectedLng(lng);
         await recalcDistance(lat, lng);
       } else {
-        // Manual typing without coordinates - reset distance/fee
         setSelectedLat(undefined);
         setSelectedLng(undefined);
         setDistanceKm(null);
@@ -196,31 +307,57 @@ export default function HomePage() {
 
   const cartItems = Object.values(cart);
   const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
+    (sum, item) => {
+      const addonTotal = item.addons.reduce((a, ad) => a + ad.price, 0);
+      return sum + (item.price + addonTotal) * item.quantity;
+    },
     0
   );
 
+  // #5: Phone input handler - digits only
+  const handlePhoneChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/\D/g, "");
+    setCustomerPhone(val);
+    if (errors.phone) setErrors((prev) => { const n = { ...prev }; delete n.phone; return n; });
+  }, [errors.phone]);
+
   const handleCheckout = async () => {
+    // #5: Validation with scroll-to-error
+    const newErrors: Record<string, string> = {};
     if (cartItems.length === 0) {
       toast.error("Pilih minimal satu menu");
       return;
     }
     if (!customerName.trim()) {
-      toast.error("Nama pemesan wajib diisi");
-      return;
+      newErrors.name = "Nama pemesan wajib diisi";
     }
     if (!customerPhone.trim()) {
-      toast.error("Nomor WhatsApp wajib diisi");
-      return;
+      newErrors.phone = "Nomor WhatsApp wajib diisi";
+    } else if (customerPhone.trim().length < 10 || customerPhone.trim().length > 14) {
+      newErrors.phone = "Nomor WhatsApp harus 10-14 digit";
     }
     if (orderType === "delivery" && !address.trim()) {
-      toast.error("Alamat pengantaran wajib diisi");
-      return;
+      newErrors.address = "Alamat pengantaran wajib diisi";
     }
     if (orderType === "delivery" && distanceError) {
-      toast.error("Jarak melebihi batas maksimum pengantaran");
+      newErrors.address = "Jarak melebihi batas maksimum pengantaran";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      // Scroll to first error
+      if (newErrors.name && nameRef.current) {
+        nameRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+        nameRef.current.focus();
+      } else if (newErrors.phone && phoneRef.current) {
+        phoneRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+        phoneRef.current.focus();
+      } else if (newErrors.address && addressRef.current) {
+        addressRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
       return;
     }
+    setErrors({});
 
     setIsSubmitting(true);
     try {
@@ -231,7 +368,7 @@ export default function HomePage() {
           items: cartItems.map((item) => ({
             productId: item.productId,
             quantity: item.quantity,
-            notes: item.notes || undefined,
+            addons: item.addons.length > 0 ? item.addons : undefined,
           })),
           orderType,
           customerName: customerName.trim(),
@@ -249,11 +386,19 @@ export default function HomePage() {
         return;
       }
 
+      // Task 3: Include image and productId in checkout data
       sessionStorage.setItem(
         "himeal_checkout",
         JSON.stringify({
           orderId: data.orderId,
-          items: cartItems,
+          items: cartItems.map((item) => ({
+            productId: item.productId,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            image: item.image,
+            addons: item.addons,
+          })),
           orderType,
           customerName: customerName.trim(),
           customerPhone: customerPhone.trim(),
@@ -283,7 +428,24 @@ export default function HomePage() {
     }
   };
 
-  const dayName = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(new Date());
+  const dayName = new Intl.DateTimeFormat("id-ID", { weekday: "long" }).format(new Date());
+
+  // Task 7: Scroll to specific slide
+  const scrollToSlide = (idx: number) => {
+    setActiveSlide(idx);
+    heroScrollRef.current?.children[idx]?.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
+    // Reset auto-advance timer
+    if (heroIntervalRef.current) clearInterval(heroIntervalRef.current);
+    if (heroSlides.length > 1) {
+      heroIntervalRef.current = setInterval(() => {
+        setActiveSlide((prev) => {
+          const next = (prev + 1) % heroSlides.length;
+          heroScrollRef.current?.children[next]?.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
+          return next;
+        });
+      }, 4000);
+    }
+  };
 
   return (
     <>
@@ -303,16 +465,51 @@ export default function HomePage() {
       </header>
 
       <main className="px-6 lg:px-8 space-y-10 pb-32 max-w-5xl mx-auto">
-        {/* Hero Section */}
+        {/* Task 7: Hero Section - Auto-sliding carousel or static fallback */}
         <section className="mt-4 animate-fade-in">
-          <div className="relative h-48 w-full rounded-3xl overflow-hidden bg-surface-container">
-            <div className="w-full h-full bg-gradient-to-br from-primary-container/30 via-surface-container to-background" />
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
-            <div className="absolute bottom-6 left-6">
-              <span className="text-xs font-label uppercase tracking-widest text-primary font-bold">Elite Performance Fuel</span>
-              <h2 className="text-3xl font-headline font-extrabold tracking-tight text-on-surface">Curated Nutrition.</h2>
+          {heroSlides.length > 0 ? (
+            <div>
+              <div
+                ref={heroScrollRef}
+                className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none hide-scrollbar rounded-3xl"
+                style={{ scrollbarWidth: "none" }}
+              >
+                {heroSlides.map((slide) => (
+                  <div key={slide.id} className="snap-start shrink-0 w-full relative h-48 rounded-3xl overflow-hidden">
+                    <img src={slide.image} alt={slide.title || "HiMeal"} className="w-full h-full object-cover" loading="lazy" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
+                    <div className="absolute bottom-6 left-6">
+                      {slide.subtitle && <span className="text-xs font-label uppercase tracking-widest text-primary font-bold">{slide.subtitle}</span>}
+                      {slide.title && <h2 className="text-3xl font-headline font-extrabold tracking-tight text-on-surface">{slide.title}</h2>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* Dots indicator */}
+              {heroSlides.length > 1 && (
+                <div className="flex justify-center gap-2 mt-3">
+                  {heroSlides.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => scrollToSlide(idx)}
+                      className={`h-1.5 rounded-full transition-all duration-300 ${
+                        idx === activeSlide ? "w-6 bg-primary" : "w-1.5 bg-outline-variant"
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
+          ) : (
+            <div className="relative h-48 w-full rounded-3xl overflow-hidden bg-surface-container">
+              <div className="w-full h-full bg-gradient-to-br from-primary-container/30 via-surface-container to-background" />
+              <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
+              <div className="absolute bottom-6 left-6">
+                <span className="text-xs font-label uppercase tracking-widest text-primary font-bold">Elite Performance Fuel</span>
+                <h2 className="text-3xl font-headline font-extrabold tracking-tight text-on-surface">Curated Nutrition.</h2>
+              </div>
+            </div>
+          )}
         </section>
 
         {/* Content Grid - 2 cols on desktop */}
@@ -351,9 +548,9 @@ export default function HomePage() {
                   <MenuCard
                     item={item}
                     quantity={cart[item.id]?.quantity || 0}
-                    notes={cart[item.id]?.notes || ""}
                     onQuantityChange={(qty) => updateQuantity(item.id, qty)}
-                    onNotesChange={(notes) => updateNotes(item.id, notes)}
+                    selectedAddons={cart[item.id]?.addons || []}
+                    onAddonsChange={(addons) => updateAddons(item.id, addons)}
                   />
                 </div>
               ))
@@ -402,37 +599,44 @@ export default function HomePage() {
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-primary text-lg pointer-events-none">person</span>
               <input
+                ref={nameRef}
                 type="text"
                 value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
+                onChange={(e) => { setCustomerName(e.target.value); if (errors.name) setErrors((prev) => { const n = { ...prev }; delete n.name; return n; }); }}
                 placeholder="Nama lengkap"
-                className="w-full pl-12 pr-4 py-4 bg-surface-container border-none rounded-2xl text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary shadow-inner"
+                className={`w-full pl-12 pr-4 py-4 bg-surface-container border-none rounded-2xl text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary shadow-inner ${errors.name ? "ring-2 ring-error" : ""}`}
               />
             </div>
+            {errors.name && <p className="text-xs text-error font-medium pl-1">{errors.name}</p>}
           </div>
 
-          {/* Customer Phone */}
+          {/* Customer Phone - Task 5: digits only, maxLength */}
           <div className="space-y-2">
             <label className="font-label text-xs uppercase tracking-widest text-on-surface-variant font-medium">No. WhatsApp *</label>
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-primary text-lg pointer-events-none">phone</span>
               <input
+                ref={phoneRef}
                 type="tel"
+                inputMode="numeric"
+                maxLength={14}
                 value={customerPhone}
-                onChange={(e) => setCustomerPhone(e.target.value)}
+                onChange={handlePhoneChange}
                 placeholder="08xxxxxxxxxx"
-                className="w-full pl-12 pr-4 py-4 bg-surface-container border-none rounded-2xl text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary shadow-inner"
+                className={`w-full pl-12 pr-4 py-4 bg-surface-container border-none rounded-2xl text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary shadow-inner ${errors.phone ? "ring-2 ring-error" : ""}`}
               />
             </div>
+            {errors.phone && <p className="text-xs text-error font-medium pl-1">{errors.phone}</p>}
           </div>
 
           {/* Delivery-specific fields */}
           {orderType === "delivery" && (
             <>
               {/* Address Search */}
-              <div className="space-y-2">
+              <div className="space-y-2" ref={addressRef}>
                 <label className="font-label text-xs uppercase tracking-widest text-on-surface-variant font-medium">Alamat Lengkap *</label>
                 <AddressSearch value={address} onChange={handleAddressSelect} />
+                {errors.address && <p className="text-xs text-error font-medium pl-1">{errors.address}</p>}
               </div>
 
               {/* Address Notes */}
@@ -580,6 +784,28 @@ export default function HomePage() {
         </section>
 
         </div>{/* end grid */}
+
+        {/* Task 13: Partners Section */}
+        {partners.length > 0 && (
+          <section className="space-y-4 animate-fade-in-up">
+            <h3 className="text-center text-xs font-label uppercase tracking-[0.2em] text-on-surface-variant font-medium">Supported By</h3>
+            <div className="overflow-hidden relative">
+              <div className="flex animate-marquee gap-12 items-center">
+                {[...partners, ...partners].map((p, i) => (
+                  <div key={`${p.id}-${i}`} className="shrink-0">
+                    {p.link_url ? (
+                      <a href={p.link_url} target="_blank" rel="noopener noreferrer" className="block opacity-60 hover:opacity-100 transition-opacity">
+                        <img src={p.logo_url} alt={p.name} className="h-8 w-auto object-contain grayscale hover:grayscale-0 transition-all" loading="lazy" />
+                      </a>
+                    ) : (
+                      <img src={p.logo_url} alt={p.name} className="h-8 w-auto object-contain opacity-60 grayscale" loading="lazy" />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
       </main>
 
       {/* Footer Shell */}
@@ -607,7 +833,7 @@ export default function HomePage() {
             name: item.name,
             quantity: item.quantity,
             price: item.price,
-            notes: item.notes,
+            addons: item.addons,
           }))}
           subtotal={subtotal}
           deliveryFee={deliveryFee}
