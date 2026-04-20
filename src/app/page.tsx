@@ -871,21 +871,17 @@ export default function HomePage() {
       </main>
       )}
 
-      {/* Footer Shell */}
+      {/* Footer */}
       <footer className="bg-surface-container-low rounded-t-[2rem] mt-20">
-        <div className="flex flex-col md:flex-row justify-between items-center px-12 py-16 w-full gap-8">
+        <div className="flex flex-col items-center text-center px-8 py-12 gap-4">
           <div className="text-lg font-bold text-primary font-headline uppercase tracking-widest">HI MEAL!</div>
-          <div className="flex gap-6">
-            <span className="font-['Inter'] text-sm tracking-wide uppercase text-outline-variant hover:text-primary transition-opacity cursor-pointer">Sourcing</span>
-            <span className="font-['Inter'] text-sm tracking-wide uppercase text-outline-variant hover:text-primary transition-opacity cursor-pointer">The Vault</span>
-            <span
-              onClick={() => router.push("/feedback")}
-              className="font-['Inter'] text-sm tracking-wide uppercase text-outline-variant hover:text-primary transition-opacity cursor-pointer"
-            >
-              Kritik & Saran
-            </span>
-          </div>
-          <p className="font-['Inter'] text-xs tracking-wide uppercase text-outline-variant">&copy; {new Date().getFullYear()} HiMeal. Good food, good mood.</p>
+          <span
+            onClick={() => router.push("/feedback")}
+            className="font-['Inter'] text-sm tracking-wide uppercase text-outline-variant hover:text-primary transition-colors cursor-pointer"
+          >
+            Kritik & Saran
+          </span>
+          <p className="font-['Inter'] text-[10px] tracking-wide uppercase text-outline-variant/60">&copy; {new Date().getFullYear()} HiMeal. Good food, good mood.</p>
         </div>
       </footer>
 
