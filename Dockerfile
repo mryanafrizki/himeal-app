@@ -15,13 +15,13 @@ RUN npm run build
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
+RUN mkdir -p /app/data /app/data/uploads && chown -R nextjs:nodejs /app/data
 
 # Copy standalone output
 RUN cp -r .next/standalone/. ./standalone/ && \
     cp -r .next/static ./standalone/.next/static && \
     cp -r public ./standalone/public && \
-    mkdir -p ./standalone/data && \
+    mkdir -p ./standalone/data/uploads && \
     chown -R nextjs:nodejs ./standalone
 
 USER nextjs
