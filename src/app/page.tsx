@@ -873,7 +873,7 @@ export default function HomePage() {
 
       {/* Footer */}
       <footer className="bg-surface-container-low rounded-t-[2rem] mt-20">
-        <div className="flex flex-col items-center text-center px-8 py-12 gap-4">
+        <div className="flex justify-between items-center px-12 py-16 w-full">
           <div className="text-lg font-bold text-primary font-headline uppercase tracking-widest">HI MEAL!</div>
           <span
             onClick={() => router.push("/feedback")}
@@ -881,7 +881,7 @@ export default function HomePage() {
           >
             Kritik & Saran
           </span>
-          <p className="font-['Inter'] text-[10px] tracking-wide uppercase text-outline-variant/60">&copy; {new Date().getFullYear()} HiMeal. Good food, good mood.</p>
+          <p className="font-['Inter'] text-xs tracking-wide uppercase text-outline-variant">&copy; {new Date().getFullYear()} HiMeal. Good food, good mood.</p>
         </div>
       </footer>
 
