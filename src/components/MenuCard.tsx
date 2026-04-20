@@ -43,8 +43,9 @@ function PromoCountdown({ endDate }: { endDate: string }) {
 
   if (!timeLeft) return null;
   return (
-    <span className="text-[10px] text-tertiary font-bold tracking-wide">
-      ⏳ {timeLeft}
+    <span className="inline-flex items-center gap-1 text-[10px] text-tertiary font-bold tracking-wide">
+      <span className="material-symbols-outlined text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>timer</span>
+      {timeLeft}
     </span>
   );
 }

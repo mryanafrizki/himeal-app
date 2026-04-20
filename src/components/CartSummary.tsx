@@ -10,6 +10,7 @@ interface CartAddon {
 }
 
 interface CartItem {
+  productId: string;
   name: string;
   quantity: number;
   price: number;
@@ -21,6 +22,7 @@ interface CartSummaryProps {
   subtotal: number;
   deliveryFee: number;
   onCheckout: () => void;
+  onUpdateQty?: (productId: string, qty: number) => void;
   isLoading?: boolean;
 }
 
@@ -29,6 +31,7 @@ export default function CartSummary({
   subtotal,
   deliveryFee,
   onCheckout,
+  onUpdateQty,
   isLoading = false,
 }: CartSummaryProps) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -108,28 +111,56 @@ export default function CartSummary({
                 {items.map((item, i) => (
                   <div
                     key={i}
-                    className="flex items-start justify-between gap-3"
+                    className="flex items-center justify-between gap-3"
                   >
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-container/20 text-[10px] font-bold text-primary">
-                          {item.quantity}x
-                        </span>
-                        <span className="truncate text-sm text-on-surface">
-                          {item.name}
-                        </span>
-                      </div>
+                      <span className="truncate text-sm text-on-surface block">{item.name}</span>
                       {item.addons && item.addons.length > 0 && (
-                        <p className="mt-0.5 pl-8 text-[11px] text-on-surface-variant">
+                        <p className="text-[11px] text-on-surface-variant mt-0.5">
                           + {item.addons.map((a) => a.name).join(", ")}
                         </p>
                       )}
                     </div>
-                    <span className="shrink-0 text-sm font-headline font-medium text-on-surface">
-                      {formatCurrency(
-                        (item.price + (item.addons?.reduce((s, a) => s + a.price, 0) || 0)) * item.quantity
+                    <div className="flex items-center gap-2 shrink-0">
+                      {onUpdateQty ? (
+                        <div className="flex items-center gap-1">
+                          {item.quantity === 1 ? (
+                            <button
+                              type="button"
+                              onClick={() => onUpdateQty(item.productId, 0)}
+                              className="w-7 h-7 flex items-center justify-center rounded-full bg-error-container/20 text-error active:scale-90 transition-transform"
+                            >
+                              <span className="material-symbols-outlined text-base">delete</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => onUpdateQty(item.productId, item.quantity - 1)}
+                              className="w-7 h-7 flex items-center justify-center rounded-full bg-surface-container-highest text-on-surface-variant active:scale-90 transition-transform"
+                            >
+                              <span className="material-symbols-outlined text-base">remove</span>
+                            </button>
+                          )}
+                          <span className="w-6 text-center text-sm font-bold text-on-surface">{item.quantity}</span>
+                          <button
+                            type="button"
+                            onClick={() => onUpdateQty(item.productId, item.quantity + 1)}
+                            className="w-7 h-7 flex items-center justify-center rounded-full bg-primary-container text-on-primary-container active:scale-90 transition-transform"
+                          >
+                            <span className="material-symbols-outlined text-base">add</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-container/20 text-[10px] font-bold text-primary">
+                          {item.quantity}x
+                        </span>
                       )}
-                    </span>
+                      <span className="text-sm font-headline font-medium text-on-surface w-20 text-right">
+                        {formatCurrency(
+                          (item.price + (item.addons?.reduce((s, a) => s + a.price, 0) || 0)) * item.quantity
+                        )}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>

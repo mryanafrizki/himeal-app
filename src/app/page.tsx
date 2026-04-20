@@ -77,6 +77,12 @@ export default function HomePage() {
   // #13: Partners
   const [partners, setPartners] = useState<Partner[]>([]);
 
+  // Store status
+  const [storeMode, setStoreMode] = useState<string>("open");
+  const [storeOpen, setStoreOpen] = useState(true);
+  const [storeMessage, setStoreMessage] = useState("");
+  const [nextOpen, setNextOpen] = useState("");
+
   // FEAT-14: Restore saved customer data from localStorage
   useEffect(() => {
     try {
@@ -152,6 +158,21 @@ export default function HomePage() {
       })
       .catch(() => toast.error("Gagal memuat menu"))
       .finally(() => setMenuLoading(false));
+  }, []);
+
+  // Fetch store status
+  useEffect(() => {
+    fetch("/api/store/status")
+      .then((res) => res.json())
+      .then((data) => {
+        setStoreMode(data.mode || "open");
+        setStoreOpen(data.isOpen ?? true);
+        if (data.mode === "maintenance") setStoreMessage(data.maintenanceMessage || "Sedang dalam perbaikan.");
+        else if (data.mode === "info") setStoreMessage(data.infoMessage || "");
+        else if (data.mode === "closed") setStoreMessage("Toko sedang tutup.");
+        if (data.nextOpenDay && data.nextOpenTime) setNextOpen(`Buka ${data.nextOpenDay} ${data.nextOpenTime}`);
+      })
+      .catch(() => {});
   }, []);
 
   // Task 7: Fetch hero slides
@@ -446,6 +467,34 @@ export default function HomePage() {
         </div>
       </header>
 
+      {/* Store status banner */}
+      {(storeMode === "maintenance" || storeMode === "closed" || (storeMode === "info" && storeMessage)) && (
+        <div className={`px-6 py-3 text-center text-sm font-medium ${
+          storeMode === "maintenance" ? "bg-error-container/30 text-error" :
+          storeMode === "closed" ? "bg-error-container/30 text-error" :
+          "bg-tertiary-container/30 text-tertiary"
+        }`}>
+          <span className="material-symbols-outlined text-sm align-middle mr-1.5" style={{ fontVariationSettings: "'FILL' 1" }}>
+            {storeMode === "maintenance" ? "construction" : storeMode === "closed" ? "lock" : "info"}
+          </span>
+          {storeMessage}
+          {nextOpen && <span className="ml-2 opacity-70">({nextOpen})</span>}
+        </div>
+      )}
+
+      {/* Maintenance/closed overlay - block ordering */}
+      {(storeMode === "maintenance" || storeMode === "closed" || !storeOpen) && storeMode !== "info" && storeMode !== "open" ? (
+        <main className="px-6 lg:px-8 pb-32 max-w-6xl mx-auto flex flex-col items-center justify-center min-h-[60vh] text-center gap-4">
+          <span className="material-symbols-outlined text-6xl text-outline" style={{ fontVariationSettings: "'FILL' 1" }}>
+            {storeMode === "maintenance" ? "construction" : "lock"}
+          </span>
+          <h2 className="text-2xl font-headline font-bold text-on-surface">
+            {storeMode === "maintenance" ? "Sedang Maintenance" : "Toko Tutup"}
+          </h2>
+          <p className="text-on-surface-variant max-w-sm">{storeMessage}</p>
+          {nextOpen && <p className="text-primary font-medium">{nextOpen}</p>}
+        </main>
+      ) : (
       <main className="px-6 lg:px-8 space-y-10 pb-32 max-w-6xl mx-auto">
         {/* Task 7: Hero Section - Auto-sliding carousel or static fallback */}
         <section className="mt-4 animate-fade-in">
@@ -820,6 +869,7 @@ export default function HomePage() {
           );
         })()}
       </main>
+      )}
 
       {/* Footer Shell */}
       <footer className="bg-surface-container-low rounded-t-[2rem] mt-20">
@@ -843,6 +893,7 @@ export default function HomePage() {
       {cartItems.length > 0 && (
         <CartSummary
           items={cartItems.map((item) => ({
+            productId: item.productId,
             name: item.name,
             quantity: item.quantity,
             price: item.price,
@@ -851,6 +902,7 @@ export default function HomePage() {
           subtotal={subtotal}
           deliveryFee={deliveryFee}
           onCheckout={handleCheckout}
+          onUpdateQty={updateQuantity}
           isLoading={isSubmitting}
         />
       )}
