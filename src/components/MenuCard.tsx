@@ -95,13 +95,18 @@ export default function MenuCard({
     onQuantityChange(quantity - 1);
   };
 
-  const toggleAddon = (addon: Addon) => {
+  const changeAddonQty = (addon: Addon, delta: number) => {
     if (!onAddonsChange) return;
-    const exists = selectedAddons.find((a) => a.id === addon.id);
-    if (exists) {
-      onAddonsChange(selectedAddons.filter((a) => a.id !== addon.id));
-    } else {
-      onAddonsChange([...selectedAddons, addon]);
+    const existing = selectedAddons.find((a) => a.id === addon.id);
+    if (existing) {
+      const newQty = (existing as Addon & { qty?: number }).qty ? (existing as Addon & { qty?: number }).qty! + delta : 1 + delta;
+      if (newQty <= 0) {
+        onAddonsChange(selectedAddons.filter((a) => a.id !== addon.id));
+      } else {
+        onAddonsChange(selectedAddons.map((a) => a.id === addon.id ? { ...a, qty: newQty } : a));
+      }
+    } else if (delta > 0) {
+      onAddonsChange([...selectedAddons, { ...addon, qty: 1 } as Addon]);
     }
   };
 
@@ -159,29 +164,36 @@ export default function MenuCard({
         )}
       </div>
 
-      {/* Addons */}
+      {/* Addons with qty */}
       {addons.length > 0 && quantity > 0 && (
         <div className="space-y-2 pt-1">
           <span className="text-[10px] font-label uppercase tracking-widest text-on-surface-variant font-medium">Add-ons</span>
-          <div className="flex flex-wrap gap-2">
+          <div className="space-y-1.5">
             {addons.map((addon) => {
-              const selected = selectedAddons.some((a) => a.id === addon.id);
+              const sel = selectedAddons.find((a) => a.id === addon.id) as (Addon & { qty?: number }) | undefined;
+              const qty = sel?.qty || 0;
               return (
-                <button
-                  key={addon.id}
-                  type="button"
-                  onClick={() => toggleAddon(addon)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all active:scale-95 ${
-                    selected
-                      ? "bg-primary-container text-on-primary-container"
-                      : "bg-surface-container-highest text-on-surface-variant hover:text-on-surface"
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: selected ? "'FILL' 1" : "'FILL' 0" }}>
-                    {selected ? "check_circle" : "add_circle"}
-                  </span>
-                  {addon.name} +{formatCurrency(addon.price)}
-                </button>
+                <div key={addon.id} className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-on-surface-variant">{addon.name} <span className="text-outline">+{formatCurrency(addon.price)}</span></span>
+                  <div className="flex items-center gap-1">
+                    {qty > 0 ? (
+                      <>
+                        <button type="button" onClick={() => changeAddonQty(addon, -1)} className="w-6 h-6 flex items-center justify-center rounded-full bg-surface-container-highest text-on-surface-variant active:scale-90 transition-transform">
+                          <span className="material-symbols-outlined text-sm">remove</span>
+                        </button>
+                        <span className="w-5 text-center text-xs font-bold text-on-surface">{qty}</span>
+                        <button type="button" onClick={() => changeAddonQty(addon, 1)} className="w-6 h-6 flex items-center justify-center rounded-full bg-primary-container text-on-primary-container active:scale-90 transition-transform">
+                          <span className="material-symbols-outlined text-sm">add</span>
+                        </button>
+                      </>
+                    ) : (
+                      <button type="button" onClick={() => changeAddonQty(addon, 1)} className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container-highest text-on-surface-variant text-[10px] font-medium hover:text-on-surface active:scale-95 transition-all">
+                        <span className="material-symbols-outlined text-xs">add</span>
+                        Tambah
+                      </button>
+                    )}
+                  </div>
+                </div>
               );
             })}
           </div>

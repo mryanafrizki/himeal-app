@@ -49,7 +49,7 @@ export default function AdminAddonsPage() {
       });
       if (res.status === 401) { router.push("/admin"); return; }
       const data = await res.json();
-      setAddons(Array.isArray(data) ? data : []);
+      setAddons(Array.isArray(data) ? data : Array.isArray(data.addons) ? data.addons : []);
     } catch { /* ignore */ }
   }, [adminKey, router]);
 
