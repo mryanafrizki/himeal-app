@@ -385,7 +385,7 @@ export default function HomePage() {
           orderType,
           customerName: customerName.trim(),
           customerPhone: customerPhone.trim(),
-          address: orderType === "delivery" ? address : "Takeaway - Ambil di lokasi HiMeal",
+          address: orderType === "delivery" ? address : "Pickup - Ambil di lokasi HiMeal",
           addressNotes: addressNotes.trim() || undefined,
           lat: orderType === "delivery" ? selectedLat : undefined,
           lng: orderType === "delivery" ? selectedLng : undefined,
@@ -423,7 +423,7 @@ export default function HomePage() {
           deliveryFee: data.deliveryFee,
           total: data.total,
           distanceKm: data.distanceKm,
-          address: orderType === "delivery" ? address : "Takeaway - Ambil di lokasi HiMeal",
+          address: orderType === "delivery" ? address : "Pickup - Ambil di lokasi HiMeal",
           addressNotes: addressNotes.trim(),
         })
       );
@@ -616,7 +616,7 @@ export default function HomePage() {
                 }`}
               >
                 <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: orderType === "takeaway" ? "'FILL' 1" : "'FILL' 0" }}>shopping_bag</span>
-                Takeaway
+                Pickup
               </button>
             </div>
           </div>
@@ -809,7 +809,7 @@ export default function HomePage() {
             </>
           )}
 
-          {/* Takeaway - show HiMeal location + catatan */}
+          {/* Pickup - show HiMeal location + catatan */}
           {orderType === "takeaway" && (
             <div className="space-y-4">
               <div className="botanical-card rounded-xl p-5 space-y-3">
@@ -823,7 +823,7 @@ export default function HomePage() {
                 <p className="text-xs text-primary-container font-semibold uppercase tracking-widest">Ongkir: GRATIS</p>
               </div>
 
-              {/* Catatan Takeaway */}
+              {/* Catatan Pickup */}
               <div className="space-y-2">
                 <label className="font-label text-xs uppercase tracking-widest text-on-surface-variant font-medium">Catatan</label>
                 <div className="relative">

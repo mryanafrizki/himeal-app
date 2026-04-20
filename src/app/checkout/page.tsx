@@ -46,6 +46,7 @@ export default function CheckoutPage() {
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [editAddress, setEditAddress] = useState("");
+  const [editAddressNotes, setEditAddressNotes] = useState("");
 
   // Task 6: Voucher state
   const [voucherCode, setVoucherCode] = useState("");
@@ -150,6 +151,7 @@ export default function CheckoutPage() {
     if (field === "name") updated.customerName = editName.trim();
     if (field === "phone") updated.customerPhone = editPhone.trim();
     if (field === "address") updated.address = editAddress.trim();
+    if (field === "addressNotes") updated.addressNotes = editAddressNotes.trim();
     setData(updated);
     sessionStorage.setItem("himeal_checkout", JSON.stringify(updated));
     try {
@@ -159,6 +161,7 @@ export default function CheckoutPage() {
         if (field === "name") c.customerName = updated.customerName;
         if (field === "phone") c.customerPhone = updated.customerPhone;
         if (field === "address") c.address = updated.address;
+        if (field === "addressNotes") c.addressNotes = updated.addressNotes;
         sessionStorage.setItem("himeal_customer", JSON.stringify(c));
       }
     } catch { /* ignore */ }
@@ -309,7 +312,7 @@ export default function CheckoutPage() {
         {/* Task 2: Address / Takeaway label */}
         <section className="mb-10 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
           <h2 className="font-headline text-on-surface-variant text-xs uppercase tracking-widest mb-4">
-            {isTakeaway ? "Takeaway - Ambil di lokasi HiMeal" : "Alamat Pengantaran"}
+            {isTakeaway ? "Pickup - Ambil di lokasi HiMeal" : "Alamat Pengantaran"}
           </h2>
           <div className="botanical-card rounded-xl p-6 flex items-start gap-5">
             <div className="bg-primary-container/20 p-3 rounded-full shrink-0">
@@ -328,11 +331,7 @@ export default function CheckoutPage() {
                 </div>
               ) : (
                 <>
-                  <p className="font-headline font-bold text-lg text-on-surface">{data.address}</p>
-                  {data.addressNotes && (
-                    <p className="text-on-surface-variant text-sm mt-1">{data.addressNotes}</p>
-                  )}
-                  {/* Task 2: Hide distance for takeaway */}
+                  <p className="font-headline font-bold text-lg text-on-surface">{isTakeaway ? "Ambil di Lokasi HiMeal" : data.address}</p>
                   {!isTakeaway && data.distanceKm > 0 && (
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-on-surface-variant text-sm">{data.distanceKm} km via jalan</span>
@@ -350,6 +349,44 @@ export default function CheckoutPage() {
               </button>
             )}
           </div>
+        </section>
+
+        {/* Editable notes section */}
+        <section className="mb-10 animate-fade-in-up" style={{ animationDelay: '150ms' }}>
+          <h2 className="font-headline text-on-surface-variant text-xs uppercase tracking-widest mb-4">
+            {isTakeaway ? "Catatan Pickup" : "Catatan Alamat"}
+          </h2>
+          {editingField === "addressNotes" ? (
+            <div className="botanical-card rounded-xl p-5 space-y-3">
+              <textarea
+                value={editAddressNotes}
+                onChange={(e) => setEditAddressNotes(e.target.value)}
+                placeholder={isTakeaway ? "Contoh: Ambil jam 12 siang, minta extra sambal" : "Contoh: Taro di pager, rumah cat hijau, lantai 2"}
+                rows={2}
+                className="w-full bg-surface-container border-none rounded-xl text-sm py-3 px-4 text-on-surface focus:ring-2 focus:ring-primary resize-none"
+                autoFocus
+              />
+              <div className="flex gap-2 justify-end">
+                <button onClick={() => saveField("addressNotes")} className="text-primary text-xs font-bold uppercase tracking-wider">Simpan</button>
+                <button onClick={() => setEditingField(null)} className="text-on-surface-variant text-xs uppercase">Batal</button>
+              </div>
+            </div>
+          ) : (
+            <div className="botanical-card rounded-xl p-5 flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3 min-w-0">
+                <span className="material-symbols-outlined text-primary mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>edit_note</span>
+                <p className="text-sm text-on-surface-variant">
+                  {data.addressNotes || <span className="text-outline italic">Belum ada catatan</span>}
+                </p>
+              </div>
+              <button
+                onClick={() => { setEditAddressNotes(data.addressNotes || ""); setEditingField("addressNotes"); }}
+                className="text-primary font-headline font-bold text-xs uppercase tracking-wider hover:opacity-80 transition-opacity shrink-0"
+              >
+                {data.addressNotes ? "Ubah" : "Tambah"}
+              </button>
+            </div>
+          )}
         </section>
 
         {/* Task 1+3+4b: Order Items with qty +/-, product image, notes */}
@@ -568,7 +605,7 @@ export default function CheckoutPage() {
                 <span className="material-symbols-outlined text-primary text-base" style={{ fontVariationSettings: "'FILL' 1" }}>
                   {isTakeaway ? "storefront" : "location_on"}
                 </span>
-                <span className="text-on-surface-variant">{isTakeaway ? "Takeaway" : data.address}</span>
+                <span className="text-on-surface-variant">{isTakeaway ? "Pickup" : data.address}</span>
               </div>
             </div>
 

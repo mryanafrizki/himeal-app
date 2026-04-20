@@ -72,7 +72,7 @@ export async function GET(
         if (paidOrder) {
           const orderMsg = buildNewOrderMessage({
             orderId: id,
-            orderType: paidOrder.customer_address.startsWith("Takeaway") ? "takeaway" : "delivery",
+            orderType: paidOrder.customer_address.startsWith("Pickup") || paidOrder.customer_address.startsWith("Takeaway") ? "takeaway" : "delivery",
             customerName: paidOrder.customer_name,
             customerPhone: paidOrder.customer_phone,
             customerAddress: paidOrder.customer_address,

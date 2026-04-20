@@ -56,7 +56,7 @@ export interface OrderNotificationData {
 
 export function buildNewOrderMessage(data: OrderNotificationData): string {
   const isDelivery = data.orderType !== "takeaway";
-  const typeLabel = isDelivery ? "DELIVERY" : "TAKEAWAY";
+  const typeLabel = isDelivery ? "DELIVERY" : "PICKUP";
   const typeIcon = isDelivery ? "🛵" : "🏪"; // only in telegram, not in web UI
 
   const itemLines = data.items
