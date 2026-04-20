@@ -304,6 +304,7 @@ export default function OrderTrackingPage() {
         <OrderTracker
           currentStatus={order.order_status}
           estimatedMinutes={estimatedMinutes ?? undefined}
+          isPickup={order.customer_address.startsWith("Pickup") || order.customer_address.startsWith("Takeaway")}
         />
 
         {/* FEAT-8: Rating Section (when delivered) */}

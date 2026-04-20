@@ -326,10 +326,10 @@ export default function CheckoutPage() {
           </div>
         </section>
 
-        {/* Task 2: Address / Takeaway label */}
+        {/* Address / Pickup */}
         <section className="mb-10 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
           <h2 className="font-headline text-on-surface-variant text-xs uppercase tracking-widest mb-4">
-            {isTakeaway ? "Pickup - Ambil di lokasi HiMeal" : "Alamat Pengantaran"}
+            {isTakeaway ? "Pengambilan" : "Alamat Pengantaran"}
           </h2>
           <div className="botanical-card rounded-xl p-6 flex items-start gap-5">
             <div className="bg-primary-container/20 p-3 rounded-full shrink-0">
@@ -346,10 +346,25 @@ export default function CheckoutPage() {
                     <button onClick={() => setEditingField(null)} className="text-on-surface-variant text-xs uppercase">Batal</button>
                   </div>
                 </div>
+              ) : isTakeaway ? (
+                <div className="space-y-2">
+                  <p className="font-headline font-bold text-lg text-on-surface">Ambil ke Toko</p>
+                  <p className="text-sm text-on-surface-variant">Juple&apos;s House, Purwokerto</p>
+                  <a
+                    href="https://maps.google.com/maps?q=-7.434855,109.2237517"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-primary text-sm font-semibold hover:underline mt-1"
+                  >
+                    <span className="material-symbols-outlined text-base">map</span>
+                    Buka di Google Maps
+                    <span className="material-symbols-outlined text-xs opacity-60">open_in_new</span>
+                  </a>
+                </div>
               ) : (
                 <>
-                  <p className="font-headline font-bold text-lg text-on-surface">{isTakeaway ? "Ambil di Lokasi HiMeal" : data.address}</p>
-                  {!isTakeaway && data.distanceKm > 0 && (
+                  <p className="font-headline font-bold text-lg text-on-surface">{data.address}</p>
+                  {data.distanceKm > 0 && (
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-on-surface-variant text-sm">{data.distanceKm} km via jalan</span>
                     </div>

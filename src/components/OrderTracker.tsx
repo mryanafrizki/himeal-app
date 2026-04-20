@@ -1,9 +1,10 @@
 interface OrderTrackerProps {
   currentStatus: string;
   estimatedMinutes?: number;
+  isPickup?: boolean;
 }
 
-const STEPS = [
+const DELIVERY_STEPS = [
   { key: "confirmed", label: "Pesanan Diterima", icon: "check_circle", description: "Pesanan kamu sudah diterima" },
   { key: "preparing", label: "Sedang Dimasak", icon: "restaurant", description: "Pesanan sedang diproses di dapur" },
   { key: "ready", label: "Siap Dikirim", icon: "package_2", description: "Pesanan siap dan menunggu kurir" },
@@ -11,16 +12,20 @@ const STEPS = [
   { key: "delivered", label: "Selesai", icon: "task_alt", description: "Pesanan telah sampai" },
 ] as const;
 
-function getStepIndex(status: string): number {
-  const idx = STEPS.findIndex((s) => s.key === status);
-  return idx >= 0 ? idx : -1;
-}
+const PICKUP_STEPS = [
+  { key: "confirmed", label: "Pesanan Diterima", icon: "check_circle", description: "Pesanan kamu sudah diterima" },
+  { key: "preparing", label: "Sedang Dimasak", icon: "restaurant", description: "Pesanan sedang diproses di dapur" },
+  { key: "ready", label: "Siap Diambil", icon: "shopping_bag", description: "Pesanan siap, silakan ambil di toko" },
+  { key: "delivered", label: "Selesai", icon: "task_alt", description: "Pesanan telah diambil" },
+] as const;
 
 export default function OrderTracker({
   currentStatus,
   estimatedMinutes,
+  isPickup = false,
 }: OrderTrackerProps) {
-  const currentIndex = getStepIndex(currentStatus);
+  const STEPS = isPickup ? PICKUP_STEPS : DELIVERY_STEPS;
+  const currentIndex = STEPS.findIndex((s) => s.key === currentStatus);
 
   return (
     <div className="space-y-0">
