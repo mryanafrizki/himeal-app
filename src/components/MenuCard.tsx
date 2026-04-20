@@ -48,7 +48,7 @@ function PromoCountdown({ endDate }: { endDate: string }) {
 
   if (!timeLeft) return null;
   return (
-    <span className="inline-flex items-center gap-1 text-[10px] text-tertiary font-bold tracking-wide">
+    <span className="inline-flex items-center gap-1 text-[10px] text-[#FF2D55] font-bold tracking-wide">
       <span className="material-symbols-outlined text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>timer</span>
       {timeLeft}
     </span>
@@ -116,7 +116,7 @@ export default function MenuCard({
 
       {/* Promo badge with discount % */}
       {hasPromo && (
-        <div className="absolute top-3 right-3 z-10 bg-tertiary text-on-tertiary text-[10px] font-headline font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-lg animate-bounce-in">
+        <div className="absolute top-3 right-3 z-10 bg-[#FF2D55] text-white text-[11px] font-headline font-black px-3 py-1.5 rounded-full tracking-wider shadow-[0_4px_20px_rgba(255,45,85,0.4)] animate-bounce-in">
           -{Math.round((1 - item.promo_price! / item.price) * 100)}%
         </div>
       )}

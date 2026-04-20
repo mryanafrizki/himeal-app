@@ -367,7 +367,7 @@ export default function CheckoutPage() {
                       <div className="h-full w-full bg-gradient-to-br from-primary-container/20 to-surface-container" />
                     )}
                     {item.originalPrice && item.originalPrice > item.price && (
-                      <div className="absolute top-1 right-1 bg-tertiary text-on-tertiary text-[8px] font-black px-1.5 py-0.5 rounded-full">
+                      <div className="absolute top-1 right-1 bg-[#FF2D55] text-white text-[8px] font-black px-1.5 py-0.5 rounded-full">
                         -{Math.round((1 - item.price / item.originalPrice) * 100)}%
                       </div>
                     )}
@@ -375,14 +375,9 @@ export default function CheckoutPage() {
                   <div className="flex-grow min-w-0">
                     <div className="flex justify-between items-start gap-2">
                       <h3 className="font-headline font-bold text-on-surface truncate">{item.name}</h3>
-                      <div className="text-right shrink-0">
-                        {item.originalPrice && item.originalPrice > item.price && (
-                          <span className="text-[10px] text-on-surface-variant line-through block">{formatCurrency(item.originalPrice * item.quantity)}</span>
-                        )}
-                        <span className="font-headline font-bold text-on-surface">
-                          {formatCurrency((item.price + item.addons.reduce((s, a) => s + a.price, 0)) * item.quantity)}
-                        </span>
-                      </div>
+                      <span className="font-headline font-bold text-on-surface shrink-0">
+                        {formatCurrency(((item.originalPrice && item.originalPrice > item.price ? item.originalPrice : item.price) + item.addons.reduce((s, a) => s + a.price, 0)) * item.quantity)}
+                      </span>
                     </div>
                     {item.addons.length > 0 && (
                       <p className="text-[11px] text-on-surface-variant mt-0.5">
@@ -489,24 +484,27 @@ export default function CheckoutPage() {
         {/* Pricing Summary Card */}
         <section className="mb-20 animate-fade-in-up" style={{ animationDelay: '500ms' }}>
           <div className="botanical-card rounded-xl p-8 space-y-4">
-            <div className="flex justify-between items-center text-on-surface-variant">
-              <span className="font-label text-sm uppercase tracking-wider">Subtotal</span>
-              <span className="font-headline font-medium text-on-surface">{formatCurrency(data.subtotal)}</span>
-            </div>
-            {/* Promo discount */}
             {(() => {
               const origTotal = data.items.reduce((sum, item) => {
                 const orig = item.originalPrice && item.originalPrice > item.price ? item.originalPrice : item.price;
-                return sum + orig * item.quantity;
+                return sum + (orig + item.addons.reduce((s, a) => s + a.price, 0)) * item.quantity;
               }, 0);
               const promoDiscount = origTotal - data.subtotal;
               const promoPct = origTotal > 0 ? Math.round((promoDiscount / origTotal) * 100) : 0;
-              return promoDiscount > 0 ? (
-                <div className="flex justify-between items-center">
-                  <span className="font-label text-sm uppercase tracking-wider text-primary font-bold">Diskon Promo ({promoPct}%)</span>
-                  <span className="font-headline font-bold text-primary">-{formatCurrency(promoDiscount)}</span>
-                </div>
-              ) : null;
+              return (
+                <>
+                  <div className="flex justify-between items-center text-on-surface-variant">
+                    <span className="font-label text-sm uppercase tracking-wider">Subtotal</span>
+                    <span className="font-headline font-medium text-on-surface">{formatCurrency(origTotal)}</span>
+                  </div>
+                  {promoDiscount > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="font-label text-sm uppercase tracking-wider text-[#FF2D55] font-bold">Diskon Promo ({promoPct}%)</span>
+                      <span className="font-headline font-bold text-[#FF2D55]">-{formatCurrency(promoDiscount)}</span>
+                    </div>
+                  )}
+                </>
+              );
             })()}
             {voucherApplied && voucherDiscount > 0 && (
               <div className="flex justify-between items-center">

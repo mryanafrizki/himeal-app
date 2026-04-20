@@ -156,58 +156,53 @@ export default function CartSummary({
                           {item.quantity}x
                         </span>
                       )}
-                      <div className="w-24 text-right">
-                        {item.originalPrice && item.originalPrice > item.price && (
-                          <span className="text-[10px] text-on-surface-variant line-through block">
-                            {formatCurrency(item.originalPrice * item.quantity)}
-                          </span>
+                      <span className="text-sm font-headline font-medium text-on-surface w-24 text-right">
+                        {formatCurrency(
+                          ((item.originalPrice && item.originalPrice > item.price ? item.originalPrice : item.price) + (item.addons?.reduce((s, a) => s + a.price, 0) || 0)) * item.quantity
                         )}
-                        <span className="text-sm font-headline font-medium text-on-surface">
-                          {formatCurrency(
-                            (item.price + (item.addons?.reduce((s, a) => s + a.price, 0) || 0)) * item.quantity
-                          )}
-                        </span>
-                      </div>
+                      </span>
                     </div>
                   </div>
                 ))}
               </div>
 
               {/* Totals: SUBTOTAL → DISKON → ONGKIR */}
-              <div className="mt-5 space-y-2 border-t border-outline-variant/30 pt-4">
-                <div className="flex justify-between text-xs text-on-surface-variant">
-                  <span className="font-label text-sm uppercase tracking-wider">Subtotal</span>
-                  <span className="font-headline font-medium text-on-surface">{formatCurrency(subtotal)}</span>
-                </div>
-                {(() => {
-                  const originalTotal = items.reduce((sum, item) => {
-                    const orig = item.originalPrice && item.originalPrice > item.price ? item.originalPrice : item.price;
-                    return sum + orig * item.quantity;
-                  }, 0);
-                  const totalDiscount = originalTotal - subtotal;
-                  const pct = originalTotal > 0 ? Math.round((totalDiscount / originalTotal) * 100) : 0;
-                  return totalDiscount > 0 ? (
-                    <div className="flex justify-between text-xs">
-                      <span className="font-label text-sm uppercase tracking-wider text-primary font-bold">Diskon ({pct}%)</span>
-                      <span className="font-headline font-bold text-primary">-{formatCurrency(totalDiscount)}</span>
+              {(() => {
+                const originalTotal = items.reduce((sum, item) => {
+                  const orig = item.originalPrice && item.originalPrice > item.price ? item.originalPrice : item.price;
+                  return sum + (orig + (item.addons?.reduce((s, a) => s + a.price, 0) || 0)) * item.quantity;
+                }, 0);
+                const totalDiscount = originalTotal - subtotal;
+                const pct = originalTotal > 0 ? Math.round((totalDiscount / originalTotal) * 100) : 0;
+                return (
+                  <div className="mt-5 space-y-2 border-t border-outline-variant/30 pt-4">
+                    <div className="flex justify-between text-xs text-on-surface-variant">
+                      <span className="font-label text-sm uppercase tracking-wider">Subtotal</span>
+                      <span className="font-headline font-medium text-on-surface">{formatCurrency(originalTotal)}</span>
                     </div>
-                  ) : null;
-                })()}
-                <div className="flex justify-between text-xs">
-                  <span className="font-label text-sm uppercase tracking-wider text-on-surface-variant">Ongkir</span>
-                  <span className="font-headline font-bold text-primary-container uppercase">
-                    {deliveryFee === 0 ? "GRATIS" : formatCurrency(deliveryFee)}
-                  </span>
-                </div>
-                <div className="pt-4 border-t border-outline-variant/30 flex justify-between items-end">
-                  <div>
-                    <span className="font-label text-xs uppercase tracking-[0.2em] text-on-surface-variant block mb-1">Total Amount</span>
-                    <span className="font-headline font-black text-3xl text-primary tracking-tighter">
-                      {formatCurrency(total)}
-                    </span>
+                    {totalDiscount > 0 && (
+                      <div className="flex justify-between text-xs">
+                        <span className="font-label text-sm uppercase tracking-wider text-[#FF2D55] font-bold">Diskon ({pct}%)</span>
+                        <span className="font-headline font-bold text-[#FF2D55]">-{formatCurrency(totalDiscount)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-xs">
+                      <span className="font-label text-sm uppercase tracking-wider text-on-surface-variant">Ongkir</span>
+                      <span className="font-headline font-bold text-primary-container uppercase">
+                        {deliveryFee === 0 ? "GRATIS" : formatCurrency(deliveryFee)}
+                      </span>
+                    </div>
+                    <div className="pt-4 border-t border-outline-variant/30 flex justify-between items-end">
+                      <div>
+                        <span className="font-label text-xs uppercase tracking-[0.2em] text-on-surface-variant block mb-1">Total Amount</span>
+                        <span className="font-headline font-black text-3xl text-primary tracking-tighter">
+                          {formatCurrency(total)}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
+                );
+              })()}
             </div>
 
             {/* Checkout button inside expanded */}
