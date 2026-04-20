@@ -272,6 +272,21 @@ export default function HomePage() {
     });
   }, []);
 
+  // Update addon qty from cart summary
+  const updateAddonQty = useCallback((productId: string, addonId: string, qty: number) => {
+    setCart((prev) => {
+      if (!prev[productId]) return prev;
+      const item = prev[productId];
+      let newAddons;
+      if (qty <= 0) {
+        newAddons = item.addons.filter((a) => a.id !== addonId);
+      } else {
+        newAddons = item.addons.map((a) => a.id === addonId ? { ...a, qty } : a);
+      }
+      return { ...prev, [productId]: { ...item, addons: newAddons } };
+    });
+  }, []);
+
   const recalcDistance = useCallback(async (lat: number, lng: number) => {
     try {
       const dist = await calculateRoadDistance(lat, lng);
@@ -320,7 +335,7 @@ export default function HomePage() {
   const cartItems = Object.values(cart);
   const subtotal = cartItems.reduce(
     (sum, item) => {
-      const addonTotal = item.addons.reduce((a, ad) => a + ad.price, 0);
+      const addonTotal = item.addons.reduce((a, ad) => a + ad.price * (ad.qty || 1), 0);
       return sum + (item.price + addonTotal) * item.quantity;
     },
     0
@@ -1014,6 +1029,7 @@ export default function HomePage() {
           deliveryFee={deliveryFee}
           onCheckout={handleCheckout}
           onUpdateQty={updateQuantity}
+          onUpdateAddonQty={updateAddonQty}
           isLoading={isSubmitting}
         />
       )}

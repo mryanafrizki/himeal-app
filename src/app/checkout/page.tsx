@@ -107,7 +107,7 @@ export default function CheckoutPage() {
   // Task 1: Recalculate subtotal/total from items
   const recalcTotals = useCallback((items: CheckoutItem[], currentData: CheckoutData): CheckoutData => {
     const subtotal = items.reduce((sum, item) => {
-      const addonTotal = item.addons.reduce((a, ad) => a + ad.price, 0);
+      const addonTotal = item.addons.reduce((a, ad) => a + ad.price * (ad.qty || 1), 0);
       return sum + (item.price + addonTotal) * item.quantity;
     }, 0);
     const total = subtotal + currentData.deliveryFee - voucherDiscount;
@@ -413,7 +413,7 @@ export default function CheckoutPage() {
                     <div className="flex justify-between items-start gap-2">
                       <h3 className="font-headline font-bold text-on-surface truncate">{item.name}</h3>
                       <span className="font-headline font-bold text-on-surface shrink-0">
-                        {formatCurrency(((item.originalPrice && item.originalPrice > item.price ? item.originalPrice : item.price) + item.addons.reduce((s, a) => s + a.price, 0)) * item.quantity)}
+                        {formatCurrency(((item.originalPrice && item.originalPrice > item.price ? item.originalPrice : item.price) + item.addons.reduce((s, a) => s + a.price * (a.qty || 1), 0)) * item.quantity)}
                       </span>
                     </div>
                     {item.addons.length > 0 && (
@@ -524,7 +524,7 @@ export default function CheckoutPage() {
             {(() => {
               const origTotal = data.items.reduce((sum, item) => {
                 const orig = item.originalPrice && item.originalPrice > item.price ? item.originalPrice : item.price;
-                return sum + (orig + item.addons.reduce((s, a) => s + a.price, 0)) * item.quantity;
+                return sum + (orig + item.addons.reduce((s, a) => s + a.price * (a.qty || 1), 0)) * item.quantity;
               }, 0);
               const promoDiscount = origTotal - data.subtotal;
               const promoPct = origTotal > 0 ? Math.round((promoDiscount / origTotal) * 100) : 0;
@@ -614,7 +614,7 @@ export default function CheckoutPage() {
               {data.items.map((item, i) => (
                 <div key={i} className="flex justify-between text-sm">
                   <span className="text-on-surface">{item.quantity}x {item.name}</span>
-                  <span className="text-on-surface font-medium">{formatCurrency((item.price + item.addons.reduce((s, a) => s + a.price, 0)) * item.quantity)}</span>
+                  <span className="text-on-surface font-medium">{formatCurrency((item.price + item.addons.reduce((s, a) => s + a.price * (a.qty || 1), 0)) * item.quantity)}</span>
                 </div>
               ))}
             </div>

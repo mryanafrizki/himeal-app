@@ -7,6 +7,7 @@ interface CartAddon {
   id: string;
   name: string;
   price: number;
+  qty?: number;
 }
 
 interface CartItem {
@@ -24,6 +25,7 @@ interface CartSummaryProps {
   deliveryFee: number;
   onCheckout: () => void;
   onUpdateQty?: (productId: string, qty: number) => void;
+  onUpdateAddonQty?: (productId: string, addonId: string, qty: number) => void;
   isLoading?: boolean;
 }
 
@@ -33,6 +35,7 @@ export default function CartSummary({
   deliveryFee,
   onCheckout,
   onUpdateQty,
+  onUpdateAddonQty,
   isLoading = false,
 }: CartSummaryProps) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -117,9 +120,23 @@ export default function CartSummary({
                     <div className="min-w-0 flex-1">
                       <span className="truncate text-sm text-on-surface block">{item.name}</span>
                       {item.addons && item.addons.length > 0 && (
-                        <p className="text-[11px] text-on-surface-variant mt-0.5">
-                          + {item.addons.map((a) => a.name).join(", ")}
-                        </p>
+                        <div className="flex flex-wrap gap-1.5 mt-1.5">
+                          {item.addons.map((a) => (
+                            <div key={a.id} className="inline-flex items-center gap-1 bg-surface-container-highest rounded-full pl-2.5 pr-1 py-0.5">
+                              <span className="text-[10px] text-on-surface-variant">{a.name}{a.qty && a.qty > 1 ? ` x${a.qty}` : ""}</span>
+                              {onUpdateAddonQty && (
+                                <div className="flex items-center gap-0.5">
+                                  <button type="button" onClick={() => onUpdateAddonQty(item.productId, a.id, (a.qty || 1) - 1)} className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-error-container/30 text-on-surface-variant active:scale-90 transition-transform">
+                                    <span className="material-symbols-outlined" style={{ fontSize: "10px" }}>{(a.qty || 1) <= 1 ? "close" : "remove"}</span>
+                                  </button>
+                                  <button type="button" onClick={() => onUpdateAddonQty(item.productId, a.id, (a.qty || 1) + 1)} className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-primary-container/30 text-on-surface-variant active:scale-90 transition-transform">
+                                    <span className="material-symbols-outlined" style={{ fontSize: "10px" }}>add</span>
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
                       )}
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
@@ -158,7 +175,7 @@ export default function CartSummary({
                       )}
                       <span className="text-sm font-headline font-medium text-on-surface w-24 text-right">
                         {formatCurrency(
-                          ((item.originalPrice && item.originalPrice > item.price ? item.originalPrice : item.price) + (item.addons?.reduce((s, a) => s + a.price, 0) || 0)) * item.quantity
+                          ((item.originalPrice && item.originalPrice > item.price ? item.originalPrice : item.price) + (item.addons?.reduce((s, a) => s + a.price * (a.qty || 1), 0) || 0)) * item.quantity
                         )}
                       </span>
                     </div>
@@ -170,7 +187,7 @@ export default function CartSummary({
               {(() => {
                 const originalTotal = items.reduce((sum, item) => {
                   const orig = item.originalPrice && item.originalPrice > item.price ? item.originalPrice : item.price;
-                  return sum + (orig + (item.addons?.reduce((s, a) => s + a.price, 0) || 0)) * item.quantity;
+                  return sum + (orig + (item.addons?.reduce((s, a) => s + a.price * (a.qty || 1), 0) || 0)) * item.quantity;
                 }, 0);
                 const totalDiscount = originalTotal - subtotal;
                 const pct = originalTotal > 0 ? Math.round((totalDiscount / originalTotal) * 100) : 0;
