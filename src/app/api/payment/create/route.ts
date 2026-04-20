@@ -51,10 +51,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Saweria PG adds 0.7% fee — show as "kode unik" to user
+    // Kode unik = 0.7% (display only — Saweria PG adds this internally)
     const uniqueCode = Math.ceil(orderTotal * 0.007);
     const qrisFee = 0;
-    const nominal = orderTotal + uniqueCode;
+    const nominal = orderTotal; // exact amount, PG adds fee internally
 
     // Save QRIS info to order
     updateOrderQrisInfo(body.orderId, uniqueCode, qrisFee);

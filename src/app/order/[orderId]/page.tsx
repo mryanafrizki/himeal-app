@@ -437,7 +437,7 @@ export default function OrderTrackingPage() {
             Ringkasan Pesanan
           </h4>
           <div className="space-y-4">
-            {order.items.map((item, i) => (
+            {(order.items || []).map((item, i) => (
               <div key={i} className="flex justify-between items-start">
                 <div className="flex gap-4">
                   <div className="w-16 h-16 rounded-xl bg-surface-container-high overflow-hidden shrink-0">
