@@ -769,10 +769,34 @@ export default function HomePage() {
 
         {/* Partners Section */}
         {partners.length > 0 && (() => {
-          // Always scroll — duplicate enough to fill the track
-          const repeatCount = Math.max(Math.ceil(12 / partners.length), 3);
-          const track = Array.from({ length: repeatCount }, () => partners).flat();
-          const speed = Math.max(track.length * 1.2, 10);
+          const logoBox = (p: Partner) => (
+            <div className="flex items-center justify-center h-12 px-5 rounded-lg opacity-70 hover:opacity-100 hover:scale-110 transition-all duration-200 cursor-default">
+              {p.logo_url ? (
+                <img src={p.logo_url} alt={p.name} className="h-7 w-auto object-contain" loading="lazy" />
+              ) : (
+                <span className="text-sm text-outline font-medium">{p.name}</span>
+              )}
+            </div>
+          );
+
+          if (partners.length < 3) {
+            return (
+              <section className="space-y-5 animate-fade-in-up py-8">
+                <p className="text-center text-[10px] font-label uppercase tracking-[0.3em] text-outline font-semibold">Partnership</p>
+                <div className="flex gap-8 items-center justify-center">
+                  {partners.map((p) =>
+                    p.link_url ? (
+                      <a key={p.id} href={p.link_url} target="_blank" rel="noopener noreferrer">{logoBox(p)}</a>
+                    ) : (
+                      <div key={p.id}>{logoBox(p)}</div>
+                    )
+                  )}
+                </div>
+              </section>
+            );
+          }
+
+          const track = [...partners, ...partners, ...partners];
           return (
             <section className="space-y-5 animate-fade-in-up py-8">
               <p className="text-center text-[10px] font-label uppercase tracking-[0.3em] text-outline font-semibold">Partnership</p>
@@ -781,24 +805,15 @@ export default function HomePage() {
                 <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
                 <div
                   className="flex gap-8 items-center"
-                  style={{ animation: `scroll-partners ${speed}s linear infinite`, width: "max-content" }}
+                  style={{ animation: `scroll-partners ${partners.length * 3}s linear infinite`, width: "max-content" }}
                 >
-                  {track.map((p, i) => {
-                    const content = (
-                      <div className="flex items-center justify-center h-12 px-5 rounded-lg bg-white/95">
-                        {p.logo_url ? (
-                          <img src={p.logo_url} alt={p.name} className="h-6 w-auto object-contain" loading="lazy" />
-                        ) : (
-                          <span className="text-sm text-neutral-600 font-medium">{p.name}</span>
-                        )}
-                      </div>
-                    );
-                    return p.link_url ? (
-                      <a key={`${p.id}-${i}`} href={p.link_url} target="_blank" rel="noopener noreferrer" className="shrink-0 hover:scale-105 transition-transform">{content}</a>
+                  {track.map((p, i) =>
+                    p.link_url ? (
+                      <a key={`${p.id}-${i}`} href={p.link_url} target="_blank" rel="noopener noreferrer" className="shrink-0">{logoBox(p)}</a>
                     ) : (
-                      <div key={`${p.id}-${i}`} className="shrink-0">{content}</div>
-                    );
-                  })}
+                      <div key={`${p.id}-${i}`} className="shrink-0">{logoBox(p)}</div>
+                    )
+                  )}
                 </div>
               </div>
             </section>
