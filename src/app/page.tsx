@@ -438,10 +438,14 @@ export default function HomePage() {
             <span className="text-3xl font-black text-[#5BDB6F] tracking-[-0.04em] font-['Manrope'] uppercase">HI MEAL!</span>
             <span className="font-['Inter'] text-[10px] tracking-[0.2em] uppercase text-on-surface-variant font-medium">Good food, good mood</span>
           </div>
-          <div className="flex gap-4">
-            <button className="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center text-primary transition-transform active:scale-95 duration-200">
-              <span className="material-symbols-outlined">eco</span>
-            </button>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-surface-container-highest/60" title="Halal ID3341003506277125">
+              <svg viewBox="0 0 100 100" className="w-5 h-5" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="50" cy="50" r="48" stroke="#5BDB6F" strokeWidth="3" fill="none"/>
+                <path d="M30 55 Q35 35 50 30 Q65 35 70 55 M38 50 L38 65 M50 45 L50 65 M62 50 L62 65 M35 70 Q50 75 65 70" stroke="#5BDB6F" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
+              </svg>
+              <span className="text-[9px] text-on-surface-variant font-label tracking-wider hidden sm:inline">HALAL</span>
+            </div>
           </div>
         </div>
       </header>
@@ -821,21 +825,43 @@ export default function HomePage() {
         })()}
       </main>
 
-      {/* Footer Shell */}
+      {/* Footer */}
       <footer className="bg-surface-container-low rounded-t-[2rem] mt-20">
-        <div className="flex flex-col md:flex-row justify-between items-center px-12 py-16 w-full gap-8">
+        <div className="flex flex-col items-center text-center px-8 py-12 gap-6 max-w-md mx-auto">
+          {/* Brand */}
           <div className="text-lg font-bold text-primary font-headline uppercase tracking-widest">HI MEAL!</div>
-          <div className="flex gap-6">
-            <span className="font-['Inter'] text-sm tracking-wide uppercase text-outline-variant hover:text-primary transition-opacity cursor-pointer">Sourcing</span>
-            <span className="font-['Inter'] text-sm tracking-wide uppercase text-outline-variant hover:text-primary transition-opacity cursor-pointer">The Vault</span>
+
+          {/* Halal badge */}
+          <div className="flex items-center gap-2">
+            <svg viewBox="0 0 100 100" className="w-6 h-6" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="50" cy="50" r="48" stroke="#5BDB6F" strokeWidth="3" fill="none"/>
+              <path d="M30 55 Q35 35 50 30 Q65 35 70 55 M38 50 L38 65 M50 45 L50 65 M62 50 L62 65 M35 70 Q50 75 65 70" stroke="#5BDB6F" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
+            </svg>
+            <span className="text-[10px] text-outline-variant font-label tracking-wider">HALAL ID3341003506277125</span>
+          </div>
+
+          {/* Links */}
+          <div className="flex items-center gap-6">
             <span
               onClick={() => router.push("/feedback")}
-              className="font-['Inter'] text-sm tracking-wide uppercase text-outline-variant hover:text-primary transition-opacity cursor-pointer"
+              className="font-['Inter'] text-sm tracking-wide uppercase text-outline-variant hover:text-primary transition-colors cursor-pointer"
             >
               Kritik & Saran
             </span>
+            <a
+              href="https://instagram.com/himeal.co"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-outline-variant hover:text-primary transition-colors"
+            >
+              <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
+              </svg>
+            </a>
           </div>
-          <p className="font-['Inter'] text-xs tracking-wide uppercase text-outline-variant">&copy; {new Date().getFullYear()} HiMeal. Good food, good mood.</p>
+
+          {/* Copyright */}
+          <p className="font-['Inter'] text-[10px] tracking-wide uppercase text-outline-variant/60">&copy; {new Date().getFullYear()} HiMeal. Good food, good mood.</p>
         </div>
       </footer>
 
