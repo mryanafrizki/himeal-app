@@ -252,10 +252,26 @@ export default function DeliveryMap({
           {/* Paste Link UI */}
           {method === "link" && (
             <div className="space-y-3">
-              <div className="botanical-card rounded-xl p-4">
+              <div className="botanical-card rounded-xl p-4 space-y-2">
                 <p className="text-xs text-on-surface-variant leading-relaxed">
-                  Buka <span className="font-semibold text-on-surface">Google Maps</span> &rarr; cari/pilih lokasi kamu &rarr; tekan <span className="font-semibold text-primary">Bagikan</span> &rarr; <span className="font-semibold text-primary">Salin Link</span> &rarr; tempel di bawah.
+                  <span className="font-semibold text-on-surface">Cara menyalin link:</span>
                 </p>
+                <ol className="text-xs text-on-surface-variant leading-relaxed list-decimal list-inside space-y-1">
+                  <li>Buka <a href="https://maps.google.com" target="_blank" rel="noopener noreferrer" className="text-primary font-semibold hover:underline">Google Maps</a></li>
+                  <li>Cari lokasi kamu atau tekan tahan di peta</li>
+                  <li>Tekan tombol <span className="font-semibold text-primary">Bagikan</span> (ikon share)</li>
+                  <li>Pilih <span className="font-semibold text-primary">Salin Link</span></li>
+                  <li>Tempel link di kolom bawah ini</li>
+                </ol>
+                <a
+                  href="https://support.google.com/maps/answer/144361"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline mt-1"
+                >
+                  <span className="material-symbols-outlined text-xs">help</span>
+                  Panduan lengkap dari Google
+                </a>
               </div>
 
               {/* Paste from clipboard button - easier on mobile */}

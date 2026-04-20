@@ -52,20 +52,6 @@ interface CartItem {
   addons: AddonItem[];
 }
 
-interface HeroSlide {
-  id: string;
-  image: string;
-  title: string;
-  subtitle: string;
-}
-
-interface Partner {
-  id: string;
-  name: string;
-  logo_url: string;
-  link_url?: string;
-}
-
 export default function HomePage() {
   const router = useRouter();
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -193,7 +179,10 @@ export default function HomePage() {
     heroIntervalRef.current = setInterval(() => {
       setActiveSlide((prev) => {
         const next = (prev + 1) % heroSlides.length;
-        heroScrollRef.current?.children[next]?.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
+        const el = heroScrollRef.current;
+        if (el) {
+          el.scrollTo({ left: next * el.clientWidth, behavior: "smooth" });
+        }
         return next;
       });
     }, 4000);
@@ -433,14 +422,16 @@ export default function HomePage() {
   // Task 7: Scroll to specific slide
   const scrollToSlide = (idx: number) => {
     setActiveSlide(idx);
-    heroScrollRef.current?.children[idx]?.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
+    const el = heroScrollRef.current;
+    if (el) el.scrollTo({ left: idx * el.clientWidth, behavior: "smooth" });
     // Reset auto-advance timer
     if (heroIntervalRef.current) clearInterval(heroIntervalRef.current);
     if (heroSlides.length > 1) {
       heroIntervalRef.current = setInterval(() => {
         setActiveSlide((prev) => {
           const next = (prev + 1) % heroSlides.length;
-          heroScrollRef.current?.children[next]?.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
+          const container = heroScrollRef.current;
+          if (container) container.scrollTo({ left: next * container.clientWidth, behavior: "smooth" });
           return next;
         });
       }, 4000);
@@ -451,7 +442,7 @@ export default function HomePage() {
     <>
       {/* Top Navigation Shell */}
       <header className="sticky top-0 z-50 bg-[#0C1410]/80 backdrop-blur-xl border-none">
-        <div className="flex justify-between items-center w-full px-6 lg:px-8 py-6 max-w-5xl mx-auto">
+        <div className="flex justify-between items-center w-full px-6 lg:px-8 py-6 max-w-6xl mx-auto">
           <div className="flex flex-col">
             <span className="text-3xl font-black text-[#5BDB6F] tracking-[-0.04em] font-['Manrope'] uppercase">HI MEAL!</span>
             <span className="font-['Inter'] text-[10px] tracking-[0.2em] uppercase text-on-surface-variant font-medium">Good food, good mood</span>
@@ -464,7 +455,7 @@ export default function HomePage() {
         </div>
       </header>
 
-      <main className="px-6 lg:px-8 space-y-10 pb-32 max-w-5xl mx-auto">
+      <main className="px-6 lg:px-8 space-y-10 pb-32 max-w-6xl mx-auto">
         {/* Task 7: Hero Section - Auto-sliding carousel or static fallback */}
         <section className="mt-4 animate-fade-in">
           {heroSlides.length > 0 ? (
@@ -787,21 +778,30 @@ export default function HomePage() {
 
         {/* Task 13: Partners Section */}
         {partners.length > 0 && (
-          <section className="space-y-4 animate-fade-in-up">
-            <h3 className="text-center text-xs font-label uppercase tracking-[0.2em] text-on-surface-variant font-medium">Supported By</h3>
+          <section className="space-y-6 animate-fade-in-up py-8">
+            <p className="text-center text-[10px] font-label uppercase tracking-[0.3em] text-outline font-semibold">Supported By</p>
             <div className="overflow-hidden relative">
-              <div className="flex animate-marquee gap-12 items-center">
-                {[...partners, ...partners].map((p, i) => (
-                  <div key={`${p.id}-${i}`} className="shrink-0">
-                    {p.link_url ? (
-                      <a href={p.link_url} target="_blank" rel="noopener noreferrer" className="block opacity-60 hover:opacity-100 transition-opacity">
-                        <img src={p.logo_url} alt={p.name} className="h-8 w-auto object-contain grayscale hover:grayscale-0 transition-all" loading="lazy" />
-                      </a>
-                    ) : (
-                      <img src={p.logo_url} alt={p.name} className="h-8 w-auto object-contain opacity-60 grayscale" loading="lazy" />
-                    )}
-                  </div>
-                ))}
+              {/* Fade edges */}
+              <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
+              <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
+              {/* Scrolling track */}
+              <div className="flex gap-6 items-center" style={{ animation: `scroll-partners ${Math.max(partners.length * 4, 16)}s linear infinite`, width: "max-content" }}>
+                {[...partners, ...partners, ...partners].map((p, i) => {
+                  const content = (
+                    <div className="flex items-center justify-center h-14 px-6 rounded-lg border border-outline-variant/20 bg-surface-container/50 hover:bg-surface-container hover:border-outline-variant/40 transition-all">
+                      {p.logo_url ? (
+                        <img src={p.logo_url} alt={p.name} className="h-7 w-auto object-contain opacity-70 hover:opacity-100 transition-opacity" loading="lazy" />
+                      ) : (
+                        <span className="text-sm text-outline font-medium">{p.name}</span>
+                      )}
+                    </div>
+                  );
+                  return p.link_url ? (
+                    <a key={`${p.id}-${i}`} href={p.link_url} target="_blank" rel="noopener noreferrer" className="shrink-0">{content}</a>
+                  ) : (
+                    <div key={`${p.id}-${i}`} className="shrink-0">{content}</div>
+                  );
+                })}
               </div>
             </div>
           </section>

@@ -30,6 +30,9 @@ interface Order {
   customer_name: string;
   customer_phone: string;
   customer_address: string;
+  customer_lat: number | null;
+  customer_lng: number | null;
+  address_notes: string | null;
   distance_km: number;
   delivery_fee: number;
   subtotal: number;
@@ -262,77 +265,47 @@ export default function AdminDashboardPage() {
     <div className="min-h-screen">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-[#0C1410]/90 backdrop-blur-xl border-b border-outline-variant/20">
-        <div className="flex justify-between items-center px-6 py-4 max-w-5xl mx-auto">
+        <div className="flex justify-between items-center px-6 py-3 max-w-7xl mx-auto">
           <div className="flex items-center gap-3">
-            <span className="text-xl font-black text-primary tracking-[-0.04em] font-headline uppercase">
-              HI MEAL!
-            </span>
-            <span className="text-xs bg-primary-container text-on-primary-container px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-              Admin
-            </span>
+            <span className="text-xl font-black text-primary tracking-[-0.04em] font-headline uppercase">HI MEAL!</span>
+            <span className="text-[10px] bg-primary-container text-on-primary-container px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Admin</span>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={() => router.push("/admin/hero-slides")}
-              className="flex items-center gap-1 text-xs text-on-surface-variant hover:text-primary transition-colors px-2 py-1.5 rounded-lg hover:bg-surface-container"
-            >
-              <span className="material-symbols-outlined text-base">slideshow</span>
-              <span className="hidden sm:inline">Slides</span>
-            </button>
-            <button
-              onClick={() => router.push("/admin/addons")}
-              className="flex items-center gap-1 text-xs text-on-surface-variant hover:text-primary transition-colors px-2 py-1.5 rounded-lg hover:bg-surface-container"
-            >
-              <span className="material-symbols-outlined text-base">add_circle</span>
-              <span className="hidden sm:inline">Add-ons</span>
-            </button>
-            <button
-              onClick={() => router.push("/admin/partners")}
-              className="flex items-center gap-1 text-xs text-on-surface-variant hover:text-primary transition-colors px-2 py-1.5 rounded-lg hover:bg-surface-container"
-            >
-              <span className="material-symbols-outlined text-base">handshake</span>
-              <span className="hidden sm:inline">Partners</span>
-            </button>
-            <button
-              onClick={() => router.push("/admin/vouchers")}
-              className="flex items-center gap-1 text-xs text-on-surface-variant hover:text-primary transition-colors px-2 py-1.5 rounded-lg hover:bg-surface-container"
-            >
-              <span className="material-symbols-outlined text-base">confirmation_number</span>
-              <span className="hidden sm:inline">Voucher</span>
-            </button>
-            <button
-              onClick={() => router.push("/admin/revenue")}
-              className="flex items-center gap-1 text-xs text-on-surface-variant hover:text-primary transition-colors px-2 py-1.5 rounded-lg hover:bg-surface-container"
-            >
-              <span className="material-symbols-outlined text-base">payments</span>
-              <span className="hidden sm:inline">Revenue</span>
-            </button>
-            <button
-              onClick={() => router.push("/admin/feedback")}
-              className="flex items-center gap-1 text-xs text-on-surface-variant hover:text-primary transition-colors px-2 py-1.5 rounded-lg hover:bg-surface-container"
-            >
-              <span className="material-symbols-outlined text-base">feedback</span>
-              <span className="hidden sm:inline">Feedback</span>
-            </button>
-            <button
-              onClick={() => router.push("/admin/settings")}
-              className="flex items-center gap-1 text-xs text-on-surface-variant hover:text-primary transition-colors px-2 py-1.5 rounded-lg hover:bg-surface-container"
-            >
-              <span className="material-symbols-outlined text-base">settings</span>
-              <span className="hidden sm:inline">Pengaturan</span>
-            </button>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-1.5 text-sm text-on-surface-variant hover:text-error transition-colors"
-            >
-              <span className="material-symbols-outlined text-lg">logout</span>
-              Keluar
-            </button>
+          <button onClick={handleLogout} className="flex items-center gap-1.5 text-sm text-on-surface-variant hover:text-error transition-colors">
+            <span className="material-symbols-outlined text-lg">logout</span>
+            <span className="hidden sm:inline">Keluar</span>
+          </button>
+        </div>
+        {/* Compact Nav Bar */}
+        <div className="overflow-x-auto hide-scrollbar border-t border-outline-variant/10">
+          <div className="flex items-center gap-1 px-6 py-2 max-w-7xl mx-auto min-w-max">
+            {[
+              { href: "/admin/dashboard", icon: "dashboard", label: "Dashboard", active: true },
+              { href: "/admin/hero-slides", icon: "slideshow", label: "Slides" },
+              { href: "/admin/addons", icon: "add_circle", label: "Add-ons" },
+              { href: "/admin/partners", icon: "handshake", label: "Partners" },
+              { href: "/admin/vouchers", icon: "confirmation_number", label: "Voucher" },
+              { href: "/admin/revenue", icon: "payments", label: "Revenue" },
+              { href: "/admin/feedback", icon: "feedback", label: "Feedback" },
+              { href: "/admin/settings", icon: "settings", label: "Pengaturan" },
+            ].map((item) => (
+              <button
+                key={item.href}
+                onClick={() => router.push(item.href)}
+                className={`flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg transition-colors whitespace-nowrap ${
+                  item.active
+                    ? "bg-primary-container text-on-primary-container"
+                    : "text-on-surface-variant hover:text-primary hover:bg-surface-container"
+                }`}
+              >
+                <span className="material-symbols-outlined text-sm">{item.icon}</span>
+                {item.label}
+              </button>
+            ))}
           </div>
         </div>
       </header>
 
-      <main className="px-6 py-6 max-w-5xl mx-auto space-y-6">
+      <main className="px-6 py-6 max-w-7xl mx-auto space-y-6">
         {/* Tab Navigation */}
         <div className="flex gap-2 bg-surface-container rounded-2xl p-1.5">
           <button
@@ -567,10 +540,24 @@ export default function AdminDashboardPage() {
                     </div>
 
                     {/* Address */}
-                    <p className="text-xs text-outline truncate">
+                    <div className="text-xs text-outline">
                       <span className="material-symbols-outlined text-xs align-middle mr-1">location_on</span>
-                      {order.customer_address}
-                    </p>
+                      {order.customer_lat && order.customer_lng ? (
+                        <a
+                          href={`https://maps.google.com/maps?q=${order.customer_lat},${order.customer_lng}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline"
+                        >
+                          {order.customer_address}
+                        </a>
+                      ) : (
+                        <span>{order.customer_address}</span>
+                      )}
+                      {order.address_notes && (
+                        <span className="block text-outline/60 mt-0.5 italic">{order.address_notes}</span>
+                      )}
+                    </div>
 
                     {/* Phone */}
                     <div className="flex items-center gap-4">

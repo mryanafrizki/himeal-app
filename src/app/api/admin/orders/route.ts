@@ -47,19 +47,32 @@ export async function GET(request: NextRequest) {
     }
 
     // Legacy: return all orders (backward compatible)
-    const orders = getAllOrders();
+    const allOrders = getAllOrders();
 
-    const filtered =
-      paymentStatusFilter === "all"
-        ? orders
-        : orders.filter((o) => o.payment_status === paymentStatusFilter);
+    // Bug #5: Only show orders that have payment_id (QRIS generated) OR are cancelled/expired
+    const validOrders = allOrders.filter((o) =>
+      o.payment_id !== null ||
+      o.order_status === "cancelled" ||
+      o.payment_status === "expired"
+    );
+
+    let filtered = validOrders;
+    if (paymentStatusFilter === "pending") {
+      filtered = validOrders.filter((o) => o.payment_status === "pending" && o.payment_id !== null);
+    } else if (paymentStatusFilter === "success") {
+      filtered = validOrders.filter((o) => o.payment_status === "success");
+    } else if (paymentStatusFilter === "cancelled") {
+      filtered = validOrders.filter((o) => o.order_status === "cancelled" || o.payment_status === "expired");
+    } else if (paymentStatusFilter !== "all") {
+      filtered = validOrders.filter((o) => o.payment_status === paymentStatusFilter);
+    }
 
     // Count per payment status
     const paymentStatusCount = {
-      all: orders.length,
-      pending: orders.filter((o) => o.payment_status === "pending").length,
-      success: orders.filter((o) => o.payment_status === "success").length,
-      expired: orders.filter((o) => o.payment_status === "expired").length,
+      all: validOrders.length,
+      pending: validOrders.filter((o) => o.payment_status === "pending" && o.payment_id !== null).length,
+      success: validOrders.filter((o) => o.payment_status === "success").length,
+      cancelled: validOrders.filter((o) => o.order_status === "cancelled" || o.payment_status === "expired").length,
     };
 
     return NextResponse.json({
