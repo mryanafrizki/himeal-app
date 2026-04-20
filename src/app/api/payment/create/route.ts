@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getOrder, updateOrderPayment, getStoreSettings, updateOrderQrisInfo } from "@/lib/db";
+import { getOrder, updateOrderPayment, getStoreSettings, updateOrderQrisInfo, validateVoucher, applyVoucher } from "@/lib/db";
 import { createQRIS } from "@/lib/atlantic";
 import { PAYMENT_EXPIRY_MINUTES } from "@/lib/constants";
 
 export async function POST(request: NextRequest) {
   try {
-    const body: { orderId: string } = await request.json();
+    const body: { orderId: string; voucherCode?: string } = await request.json();
 
     if (!body.orderId) {
       return NextResponse.json(
@@ -35,16 +35,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Apply voucher if provided and not already applied
+    let orderTotal = order.total;
+    if (body.voucherCode && !order.voucher_id) {
+      const voucherResult = validateVoucher(body.voucherCode, order.subtotal);
+      if (voucherResult.valid && voucherResult.discount && voucherResult.discount > 0) {
+        const discount = voucherResult.discount;
+        orderTotal = Math.max(0, order.subtotal - discount + order.delivery_fee);
+        // Update order in DB with voucher info
+        const db = (await import("@/lib/db")).getDb();
+        db.prepare(
+          "UPDATE orders SET voucher_id = ?, voucher_discount = ?, total = ? WHERE id = ?"
+        ).run(voucherResult.voucher!.id, discount, orderTotal, body.orderId);
+        applyVoucher(voucherResult.voucher!.id);
+      }
+    }
+
     // Generate unique code and calculate fee
     const uniqueCode = Math.floor(Math.random() * 99) + 1; // 1-99
-    const qrisFee = Math.ceil(order.total * 0.007) + 200;
+    const qrisFee = Math.ceil(orderTotal * 0.007) + 200;
 
     let nominal: number;
     if (storeSettings.qris_fee_mode === "user") {
-      nominal = order.total + qrisFee + uniqueCode;
+      nominal = orderTotal + qrisFee + uniqueCode;
     } else {
       // admin mode (default)
-      nominal = order.total + uniqueCode;
+      nominal = orderTotal + uniqueCode;
     }
 
     // Save QRIS info to order

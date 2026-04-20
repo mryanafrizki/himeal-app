@@ -173,26 +173,26 @@ export default function CartSummary({
                 ))}
               </div>
 
-              {/* Totals */}
-              {(() => {
-                const totalDiscount = items.reduce((sum, item) => {
-                  if (item.originalPrice && item.originalPrice > item.price) {
-                    return sum + (item.originalPrice - item.price) * item.quantity;
-                  }
-                  return sum;
-                }, 0);
-                return totalDiscount > 0 ? (
-                  <div className="mt-4 flex justify-between items-center bg-primary/10 rounded-xl px-4 py-2.5">
-                    <span className="font-label text-xs uppercase tracking-wider text-primary font-bold">Total Diskon</span>
-                    <span className="font-headline font-bold text-primary">-{formatCurrency(totalDiscount)}</span>
-                  </div>
-                ) : null;
-              })()}
-              <div className="mt-3 space-y-2 border-t border-outline-variant/30 pt-4">
+              {/* Totals: SUBTOTAL → DISKON → ONGKIR */}
+              <div className="mt-5 space-y-2 border-t border-outline-variant/30 pt-4">
                 <div className="flex justify-between text-xs text-on-surface-variant">
                   <span className="font-label text-sm uppercase tracking-wider">Subtotal</span>
                   <span className="font-headline font-medium text-on-surface">{formatCurrency(subtotal)}</span>
                 </div>
+                {(() => {
+                  const totalDiscount = items.reduce((sum, item) => {
+                    if (item.originalPrice && item.originalPrice > item.price) {
+                      return sum + (item.originalPrice - item.price) * item.quantity;
+                    }
+                    return sum;
+                  }, 0);
+                  return totalDiscount > 0 ? (
+                    <div className="flex justify-between text-xs">
+                      <span className="font-label text-sm uppercase tracking-wider text-primary font-bold">Diskon</span>
+                      <span className="font-headline font-bold text-primary">-{formatCurrency(totalDiscount)}</span>
+                    </div>
+                  ) : null;
+                })()}
                 <div className="flex justify-between text-xs">
                   <span className="font-label text-sm uppercase tracking-wider text-on-surface-variant">Ongkir</span>
                   <span className="font-headline font-bold text-primary-container uppercase">

@@ -75,14 +75,22 @@ export default function OrderTrackingPage() {
   const [existingReview, setExistingReview] = useState<ReviewData | null>(null);
   const [reviewLoaded, setReviewLoaded] = useState(false);
 
+  const retryCountRef = useRef(0);
   const fetchOrder = useCallback(async () => {
     try {
       const res = await fetch(`/api/order/${orderId}`);
       if (!res.ok) {
+        // Retry up to 3 times before giving up (order might still be updating)
+        if (retryCountRef.current < 3) {
+          retryCountRef.current++;
+          setTimeout(() => fetchOrder(), 2000);
+          return;
+        }
         toast.error("Pesanan tidak ditemukan");
         router.replace("/");
         return;
       }
+      retryCountRef.current = 0;
       const data: OrderData = await res.json();
       // Fire confetti when order transitions to delivered
       if (data.order_status === "delivered" && prevStatusRef.current && prevStatusRef.current !== "delivered") {

@@ -67,7 +67,7 @@ export default function PaymentPage() {
 
       if (data.payment_status === "success") {
         celebrate();
-        router.replace(`/order/${orderId}`);
+        setTimeout(() => router.replace(`/order/${orderId}`), 500);
       }
     } catch {
       toast.error("Gagal memuat data pesanan");
@@ -106,7 +106,8 @@ export default function PaymentPage() {
           setFailCount(0);
           celebrate();
           toast.success("Pembayaran berhasil!");
-          router.replace(`/order/${orderId}`);
+          // Small delay to ensure DB is updated before redirect
+          setTimeout(() => router.replace(`/order/${orderId}`), 1500);
         } else if (data.status === "expired") {
           if (pollingRef.current) clearInterval(pollingRef.current);
           setFailCount(0);
