@@ -91,7 +91,8 @@ export default function OrderTrackingPage() {
         return;
       }
       retryCountRef.current = 0;
-      const data: OrderData = await res.json();
+      const raw = await res.json();
+      const data: OrderData = { ...raw, items: Array.isArray(raw.items) ? raw.items : [] };
       // Fire confetti when order transitions to delivered
       if (data.order_status === "delivered" && prevStatusRef.current && prevStatusRef.current !== "delivered") {
         celebrate();
@@ -150,12 +151,14 @@ export default function OrderTrackingPage() {
       const lastId = chatMessages.length > 0 ? chatMessages[chatMessages.length - 1].id : 0;
       const res = await fetch(`/api/order/${orderId}/chat?after=${lastId}`);
       if (!res.ok) return;
-      const data: ChatMessage[] = await res.json();
+      const raw = await res.json();
+      const data: ChatMessage[] = Array.isArray(raw) ? raw : [];
       if (data.length > 0) {
         setChatMessages((prev) => {
-          const existingIds = new Set(prev.map((m) => m.id));
+          const arr = Array.isArray(prev) ? prev : [];
+          const existingIds = new Set(arr.map((m) => m.id));
           const newMsgs = data.filter((m) => !existingIds.has(m.id));
-          return newMsgs.length > 0 ? [...prev, ...newMsgs] : prev;
+          return newMsgs.length > 0 ? [...arr, ...newMsgs] : arr;
         });
       }
     } catch { /* ignore */ }
@@ -166,7 +169,7 @@ export default function OrderTrackingPage() {
     // Initial fetch
     fetch(`/api/order/${orderId}/chat?after=0`)
       .then((r) => r.ok ? r.json() : [])
-      .then((data: ChatMessage[]) => setChatMessages(data))
+      .then((data) => setChatMessages(Array.isArray(data) ? data : []))
       .catch(() => {});
   }, [orderId, isOrderActive]);
 
