@@ -871,17 +871,85 @@ export default function HomePage() {
       </main>
       )}
 
+      {/* Fun floating animation */}
+      <div className="relative overflow-hidden py-8">
+        <div className="flex justify-center">
+          <div className="animate-float text-center">
+            <div className="text-5xl leading-none" style={{ filter: "drop-shadow(0 4px 12px rgba(91,219,111,0.2))" }}>
+              <svg viewBox="0 0 80 80" className="w-16 h-16 mx-auto" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="40" cy="40" r="36" fill="#182420" stroke="#5BDB6F" strokeWidth="2"/>
+                <ellipse cx="30" cy="34" rx="3" ry="4" fill="#5BDB6F"/>
+                <ellipse cx="50" cy="34" rx="3" ry="4" fill="#5BDB6F"/>
+                <path d="M28 48 Q40 58 52 48" stroke="#5BDB6F" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
+                <path d="M20 24 Q26 18 32 22" stroke="#5BDB6F" strokeWidth="1.5" strokeLinecap="round" fill="none"/>
+                <path d="M48 22 Q54 18 60 24" stroke="#5BDB6F" strokeWidth="1.5" strokeLinecap="round" fill="none"/>
+                <circle cx="24" cy="42" r="4" fill="#5BDB6F" opacity="0.15"/>
+                <circle cx="56" cy="42" r="4" fill="#5BDB6F" opacity="0.15"/>
+              </svg>
+            </div>
+            <p className="text-xs text-on-surface-variant mt-2 font-label tracking-wider">Makan sehat, hidup senang!</p>
+          </div>
+        </div>
+      </div>
+
       {/* Footer */}
-      <footer className="bg-surface-container-low rounded-t-[2rem] mt-20">
-        <div className="flex justify-between items-center px-12 py-16 w-full">
-          <div className="text-lg font-bold text-primary font-headline uppercase tracking-widest">HI MEAL!</div>
-          <span
-            onClick={() => router.push("/feedback")}
-            className="font-['Inter'] text-sm tracking-wide uppercase text-outline-variant hover:text-primary transition-colors cursor-pointer"
-          >
-            Kritik & Saran
-          </span>
-          <p className="font-['Inter'] text-xs tracking-wide uppercase text-outline-variant">&copy; {new Date().getFullYear()} HiMeal. Good food, good mood.</p>
+      <footer className="bg-surface-container-low rounded-t-[2rem]">
+        <div className="max-w-6xl mx-auto px-8 lg:px-12 py-12 space-y-8">
+          {/* Top row: brand | kritik & saran | copyright */}
+          <div className="flex justify-between items-center">
+            <div className="text-lg font-bold text-primary font-headline uppercase tracking-widest">HI MEAL!</div>
+            <span
+              onClick={() => router.push("/feedback")}
+              className="font-['Inter'] text-sm tracking-wide uppercase text-outline-variant hover:text-primary transition-colors cursor-pointer"
+            >
+              Kritik & Saran
+            </span>
+            <p className="font-['Inter'] text-xs tracking-wide uppercase text-outline-variant hidden sm:block">&copy; {new Date().getFullYear()} HiMeal</p>
+          </div>
+
+          {/* Divider */}
+          <div className="h-px bg-outline-variant/15" />
+
+          {/* Social + Map row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Left: social + info */}
+            <div className="space-y-4">
+              <a
+                href="https://instagram.com/himeal.co"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-3 text-on-surface-variant hover:text-primary transition-colors group"
+              >
+                <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="2" width="20" height="20" rx="5"/>
+                  <circle cx="12" cy="12" r="5"/>
+                  <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/>
+                </svg>
+                <span className="font-['Inter'] text-sm">@himeal.co</span>
+              </a>
+              <p className="text-xs text-outline leading-relaxed">Good food, good mood. Healthy food delivery di Purwokerto.</p>
+            </div>
+
+            {/* Right: embedded map */}
+            <div className="space-y-2">
+              <p className="text-[10px] font-label uppercase tracking-[0.2em] text-on-surface-variant font-medium">Lokasi Toko</p>
+              <div className="rounded-2xl overflow-hidden h-48 border border-outline-variant/15">
+                <iframe
+                  src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d1000!2d109.2237517!3d-7.434855!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4t5!5e0!3m2!1sen!2sid"
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0, filter: "invert(90%) hue-rotate(180deg) brightness(0.9) contrast(1.1)" }}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  title="Lokasi HiMeal"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom copyright (mobile) */}
+          <p className="font-['Inter'] text-[10px] tracking-wide uppercase text-outline-variant/50 text-center sm:hidden">&copy; {new Date().getFullYear()} HiMeal. Good food, good mood.</p>
         </div>
       </footer>
 
