@@ -27,6 +27,10 @@ export default function CheckoutPage() {
   const router = useRouter();
   const [data, setData] = useState<CheckoutData | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editAddress, setEditAddress] = useState("");
 
   useEffect(() => {
     const stored = sessionStorage.getItem("himeal_checkout");
@@ -35,11 +39,38 @@ export default function CheckoutPage() {
       return;
     }
     try {
-      setData(JSON.parse(stored));
+      const parsed = JSON.parse(stored);
+      setData(parsed);
+      setEditName(parsed.customerName || "");
+      setEditPhone(parsed.customerPhone || "");
+      setEditAddress(parsed.address || "");
     } catch {
       router.replace("/");
     }
   }, [router]);
+
+  const saveField = (field: string) => {
+    if (!data) return;
+    const updated = { ...data };
+    if (field === "name") updated.customerName = editName.trim();
+    if (field === "phone") updated.customerPhone = editPhone.trim();
+    if (field === "address") updated.address = editAddress.trim();
+    setData(updated);
+    sessionStorage.setItem("himeal_checkout", JSON.stringify(updated));
+    // Also update customer data in sessionStorage so going back preserves it
+    try {
+      const savedCustomer = sessionStorage.getItem("himeal_customer");
+      if (savedCustomer) {
+        const c = JSON.parse(savedCustomer);
+        if (field === "name") c.customerName = updated.customerName;
+        if (field === "phone") c.customerPhone = updated.customerPhone;
+        if (field === "address") c.address = updated.address;
+        sessionStorage.setItem("himeal_customer", JSON.stringify(c));
+      }
+    } catch { /* ignore */ }
+    setEditingField(null);
+    toast.success("Data diperbarui");
+  };
 
   const handlePay = async () => {
     if (!data) return;
@@ -94,45 +125,83 @@ export default function CheckoutPage() {
       </header>
 
       <main className="flex-grow pt-32 px-6 max-w-3xl mx-auto w-full">
-        {/* Customer Info */}
+        {/* Customer Info - Inline Editable */}
         <section className="mb-10">
           <h2 className="font-headline text-on-surface-variant text-xs uppercase tracking-widest mb-4">Pemesan</h2>
           <div className="botanical-card rounded-xl p-6 space-y-3">
+            {/* Name */}
             <div className="flex items-center gap-3">
               <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>person</span>
-              <p className="font-headline font-bold text-on-surface">{data.customerName}</p>
+              {editingField === "name" ? (
+                <div className="flex-1 flex gap-2">
+                  <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} className="flex-1 px-3 py-1.5 bg-surface-container border-none rounded-lg text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary" autoFocus />
+                  <button onClick={() => saveField("name")} className="text-primary text-xs font-bold uppercase">Simpan</button>
+                  <button onClick={() => setEditingField(null)} className="text-on-surface-variant text-xs uppercase">Batal</button>
+                </div>
+              ) : (
+                <div className="flex-1 flex items-center justify-between">
+                  <p className="font-headline font-bold text-on-surface">{data.customerName}</p>
+                  <button onClick={() => { setEditName(data.customerName); setEditingField("name"); }} className="text-primary text-xs font-bold uppercase tracking-wider hover:opacity-80">Ubah</button>
+                </div>
+              )}
             </div>
+            {/* Phone */}
             <div className="flex items-center gap-3">
               <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>phone</span>
-              <p className="text-on-surface-variant text-sm">{data.customerPhone}</p>
+              {editingField === "phone" ? (
+                <div className="flex-1 flex gap-2">
+                  <input type="tel" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} className="flex-1 px-3 py-1.5 bg-surface-container border-none rounded-lg text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary" autoFocus />
+                  <button onClick={() => saveField("phone")} className="text-primary text-xs font-bold uppercase">Simpan</button>
+                  <button onClick={() => setEditingField(null)} className="text-on-surface-variant text-xs uppercase">Batal</button>
+                </div>
+              ) : (
+                <div className="flex-1 flex items-center justify-between">
+                  <p className="text-on-surface-variant text-sm">{data.customerPhone}</p>
+                  <button onClick={() => { setEditPhone(data.customerPhone); setEditingField("phone"); }} className="text-primary text-xs font-bold uppercase tracking-wider hover:opacity-80">Ubah</button>
+                </div>
+              )}
             </div>
           </div>
         </section>
 
-        {/* Delivery Address Card */}
+        {/* Delivery Address Card - Inline Editable */}
         <section className="mb-10">
           <h2 className="font-headline text-on-surface-variant text-xs uppercase tracking-widest mb-4">Alamat Pengantaran</h2>
           <div className="botanical-card rounded-xl p-6 flex items-start gap-5">
-            <div className="bg-primary-container/20 p-3 rounded-full">
+            <div className="bg-primary-container/20 p-3 rounded-full shrink-0">
               <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>location_on</span>
             </div>
             <div className="flex-grow">
-              <p className="font-headline font-bold text-lg text-on-surface">{data.address}</p>
-              {data.addressNotes && (
-                <p className="text-on-surface-variant text-sm mt-1">{data.addressNotes}</p>
-              )}
-              {data.distanceKm > 0 && (
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-on-surface-variant text-sm">{data.distanceKm} km via jalan</span>
+              {editingField === "address" ? (
+                <div className="space-y-2">
+                  <textarea value={editAddress} onChange={(e) => setEditAddress(e.target.value)} rows={2} className="w-full px-3 py-2 bg-surface-container border-none rounded-lg text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary resize-none" autoFocus />
+                  <div className="flex gap-2">
+                    <button onClick={() => saveField("address")} className="text-primary text-xs font-bold uppercase">Simpan</button>
+                    <button onClick={() => setEditingField(null)} className="text-on-surface-variant text-xs uppercase">Batal</button>
+                  </div>
                 </div>
+              ) : (
+                <>
+                  <p className="font-headline font-bold text-lg text-on-surface">{data.address}</p>
+                  {data.addressNotes && (
+                    <p className="text-on-surface-variant text-sm mt-1">{data.addressNotes}</p>
+                  )}
+                  {data.distanceKm > 0 && (
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-on-surface-variant text-sm">{data.distanceKm} km via jalan</span>
+                    </div>
+                  )}
+                </>
               )}
             </div>
-            <button
-              onClick={() => router.back()}
-              className="text-primary font-headline font-bold text-xs uppercase tracking-wider hover:opacity-80 transition-opacity"
-            >
-              Ubah
-            </button>
+            {editingField !== "address" && (
+              <button
+                onClick={() => { setEditAddress(data.address); setEditingField("address"); }}
+                className="text-primary font-headline font-bold text-xs uppercase tracking-wider hover:opacity-80 transition-opacity shrink-0"
+              >
+                Ubah
+              </button>
+            )}
           </div>
         </section>
 
@@ -162,6 +231,17 @@ export default function CheckoutPage() {
               </div>
             ))}
           </div>
+        </section>
+
+        {/* Add More Items Button */}
+        <section className="mb-10">
+          <button
+            onClick={() => router.push("/")}
+            className="w-full flex items-center justify-center gap-2 py-4 bg-surface-container rounded-2xl text-sm font-semibold text-primary hover:bg-surface-container-high transition-colors active:scale-[0.98]"
+          >
+            <span className="material-symbols-outlined text-lg">add_circle</span>
+            Tambah Menu Lagi
+          </button>
         </section>
 
         {/* Pricing Summary Card */}

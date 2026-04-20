@@ -48,6 +48,8 @@ export async function POST(request: NextRequest) {
       price: body.price,
       description: (body.description || "").trim(),
       image: (body.image || "").trim(),
+      is_out_of_stock: body.isOutOfStock ? 1 : 0,
+      max_order_qty: body.maxOrderQty || 0,
     });
 
     return NextResponse.json(product, { status: 201 });

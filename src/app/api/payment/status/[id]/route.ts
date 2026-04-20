@@ -34,16 +34,33 @@ export async function GET(
     }
 
     // Check with Atlantic
-    const result = await checkPaymentStatus(order.payment_id);
-
-    if (!result.status || !result.data) {
+    let result;
+    try {
+      result = await checkPaymentStatus(order.payment_id);
+      console.log("[Payment Status] Raw response:", JSON.stringify(result));
+    } catch (atlanticError) {
+      console.error("[Payment Status] Atlantic call failed:", atlanticError);
       return NextResponse.json({
         status: order.payment_status,
         orderStatus: order.order_status,
       });
     }
 
-    const paymentStatus = result.data.status;
+    if (!result.status && !result.data) {
+      return NextResponse.json({
+        status: order.payment_status,
+        orderStatus: order.order_status,
+      });
+    }
+
+    // Handle both response shapes: result.data.status (wrapped) or direct status string
+    const paymentStatus = result.data?.status || (typeof result.status === "string" ? result.status : null);
+    if (!paymentStatus || typeof paymentStatus !== "string") {
+      return NextResponse.json({
+        status: order.payment_status,
+        orderStatus: order.order_status,
+      });
+    }
 
     if (paymentStatus === "success") {
       updateOrderPaymentStatus(id, "success", "confirmed");

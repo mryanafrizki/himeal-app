@@ -131,6 +131,7 @@ export function buildStatusChangeMessage(
   const statusIcons: Record<string, string> = {
     confirmed: "✅",
     preparing: "👨‍🍳",
+    ready: "📦",
     delivering: "🛵",
     delivered: "🎉",
     cancelled: "❌",

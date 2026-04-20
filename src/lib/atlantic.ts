@@ -27,7 +27,11 @@ export interface CreateDepositResponse {
 
 export interface DepositStatusResponse {
   status: boolean;
+  message?: string;
   data?: {
+    id: string;
+    reff_id: string;
+    nominal: number;
     status: "pending" | "success" | "expired";
   };
 }
@@ -73,7 +77,9 @@ export async function checkPaymentStatus(
     throw new Error(`Atlantic H2H status check error: ${response.status}`);
   }
 
-  return response.json();
+  const result = await response.json();
+  console.log("[Atlantic] checkPaymentStatus raw response:", JSON.stringify(result));
+  return result;
 }
 
 export async function cancelPayment(

@@ -35,6 +35,18 @@ export async function calculateRoadDistance(
 }
 
 /**
+ * Validate distance is within max delivery range.
+ * Throws if distance exceeds limit.
+ */
+export function validateDeliveryDistance(distanceKm: number): void {
+  if (distanceKm > DELIVERY_CONFIG.maxDistanceKm) {
+    throw new Error(
+      `Jarak pengantaran ${distanceKm.toFixed(1)} km melebihi batas maksimum ${DELIVERY_CONFIG.maxDistanceKm} km. Silakan hubungi admin via WhatsApp untuk pemesanan jarak jauh.`
+    );
+  }
+}
+
+/**
  * Delivery fee model (mirip GoFood/GrabFood Zona I):
  * - Free ongkir: 0-5 km (subsidi dari HiMeal)
  * - 5-9 km: biaya minimum Rp 8.000 (base fee untuk 4km pertama setelah free zone)

@@ -21,6 +21,7 @@ export const DELIVERY_CONFIG = {
   baseFeeIDR: 8000,       // biaya minimum 4km pertama (mirip GoFood Zona I)
   baseDistanceKm: 4,      // jarak yang tercover biaya minimum
   perKmIDR: 2000,         // Rp 2.000/km (Zona I batas bawah)
+  maxDistanceKm: 15,      // batas maksimum jarak pengantaran
 } as const;
 
 export const HIMEAL_MAPS_EMBED = `https://maps.google.com/maps?q=${HIMEAL_ORIGIN.lat},${HIMEAL_ORIGIN.lng}&z=17&output=embed`;
@@ -30,6 +31,7 @@ export const ORDER_STATUS = {
   PAYMENT_EXPIRED: "payment_expired",
   CONFIRMED: "confirmed",
   PREPARING: "preparing",
+  READY: "ready",
   DELIVERING: "delivering",
   DELIVERED: "delivered",
   CANCELLED: "cancelled",
@@ -42,6 +44,7 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   payment_expired: "Pembayaran Kedaluwarsa",
   confirmed: "Pesanan Diterima",
   preparing: "Sedang Dimasak",
+  ready: "Siap Dikirim",
   delivering: "Sedang Diantar",
   delivered: "Selesai",
   cancelled: "Dibatalkan",

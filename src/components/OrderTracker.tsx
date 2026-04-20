@@ -4,10 +4,11 @@ interface OrderTrackerProps {
 }
 
 const STEPS = [
-  { key: "confirmed", label: "Pesanan Diterima", icon: "check", description: "Pesanan telah dikonfirmasi oleh sistem" },
-  { key: "preparing", label: "Sedang Dimasak", icon: "restaurant", description: "Chef sedang menyiapkan bahan segar untuk Anda" },
-  { key: "delivering", label: "Sedang Diantar", icon: "delivery_dining", description: "Kurir akan segera menjemput pesanan Anda" },
-  { key: "delivered", label: "Selesai", icon: "task_alt", description: "Nikmati hidangan sehat Hi-Meal Anda" },
+  { key: "confirmed", label: "Pesanan Diterima", icon: "check_circle", description: "Pesanan kamu sudah diterima" },
+  { key: "preparing", label: "Sedang Dimasak", icon: "restaurant", description: "Pesanan sedang diproses di dapur" },
+  { key: "ready", label: "Siap Dikirim", icon: "package_2", description: "Pesanan siap dan menunggu kurir" },
+  { key: "delivering", label: "Sedang Diantar", icon: "delivery_dining", description: "Kurir sedang menuju lokasi kamu" },
+  { key: "delivered", label: "Selesai", icon: "task_alt", description: "Pesanan telah sampai" },
 ] as const;
 
 function getStepIndex(status: string): number {

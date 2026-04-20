@@ -25,6 +25,7 @@ export default function PaymentPage() {
   const [expired, setExpired] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [isOwner, setIsOwner] = useState(false);
+  const [failCount, setFailCount] = useState(0);
 
   // Check if this device created the order
   useEffect(() => {
@@ -87,15 +88,19 @@ export default function PaymentPage() {
 
         if (data.status === "success") {
           if (pollingRef.current) clearInterval(pollingRef.current);
+          setFailCount(0);
           toast.success("Pembayaran berhasil!");
           router.replace(`/order/${orderId}`);
         } else if (data.status === "expired") {
           if (pollingRef.current) clearInterval(pollingRef.current);
+          setFailCount(0);
           setExpired(true);
           toast.error("Pembayaran kedaluwarsa");
+        } else {
+          setFailCount(0);
         }
       } catch {
-        // Silent fail on polling
+        setFailCount((prev) => prev + 1);
       }
     }, 5000);
 
@@ -193,6 +198,24 @@ export default function PaymentPage() {
                 Scan QR code menggunakan aplikasi <span className="text-secondary font-semibold">e-wallet</span> atau <span className="text-secondary font-semibold">mobile banking</span> pilihan Anda.
               </p>
             </div>
+
+            {/* WhatsApp fallback after 3 consecutive polling failures */}
+            {failCount >= 3 && (
+              <div className="bg-surface-container rounded-2xl p-5 w-full text-center border border-error/20 space-y-3">
+                <p className="text-on-surface-variant text-sm leading-relaxed">
+                  Jika sudah membayar, silakan hubungi admin
+                </p>
+                <a
+                  href={`https://wa.me/6287777527426?text=${encodeURIComponent(`Halo admin HiMeal, saya sudah bayar pesanan ${orderId} tapi status belum berubah. Mohon dicek.`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 bg-[#25D366] text-white px-6 py-3 rounded-full text-sm font-bold hover:opacity-90 transition-opacity active:scale-95"
+                >
+                  <span className="material-symbols-outlined text-base">chat</span>
+                  Hubungi via WhatsApp
+                </a>
+              </div>
+            )}
           </div>
         ) : (
           <div className="w-full flex flex-col items-center gap-6 pt-8">

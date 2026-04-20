@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
-import { calculateRoadDistance, calculateDeliveryFee } from "@/lib/delivery";
+import { calculateRoadDistance, calculateDeliveryFee, validateDeliveryDistance } from "@/lib/delivery";
 import { createOrder, getActiveProducts } from "@/lib/db";
 
 interface OrderItemInput {
@@ -69,9 +69,21 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
+      if (menuItem.is_out_of_stock) {
+        return NextResponse.json(
+          { error: `${menuItem.name} sedang habis` },
+          { status: 400 }
+        );
+      }
       if (!item.quantity || item.quantity < 1) {
         return NextResponse.json(
           { error: `Jumlah tidak valid untuk ${menuItem.name}` },
+          { status: 400 }
+        );
+      }
+      if (menuItem.max_order_qty > 0 && item.quantity > menuItem.max_order_qty) {
+        return NextResponse.json(
+          { error: `Maksimal pemesanan ${menuItem.name} adalah ${menuItem.max_order_qty} porsi` },
           { status: 400 }
         );
       }
@@ -100,11 +112,13 @@ export async function POST(request: NextRequest) {
       try {
         distanceKm = await calculateRoadDistance(body.lat!, body.lng!);
         distanceKm = Math.round(distanceKm * 100) / 100;
+        validateDeliveryDistance(distanceKm);
         deliveryFee = calculateDeliveryFee(distanceKm);
-      } catch {
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Gagal menghitung jarak. Coba lagi.";
         return NextResponse.json(
-          { error: "Gagal menghitung jarak. Coba lagi." },
-          { status: 502 }
+          { error: message },
+          { status: 400 }
         );
       }
     }
@@ -132,6 +146,8 @@ export async function POST(request: NextRequest) {
         order_status: "pending_payment",
         qr_string: null,
         notes: null,
+        unique_code: 0,
+        qris_fee: 0,
         expires_at: null,
       },
       validatedItems.map((item) => ({

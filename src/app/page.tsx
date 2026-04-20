@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { formatCurrency, type OrderType, type MenuItem } from "@/lib/constants";
+import { formatCurrency, DELIVERY_CONFIG, type OrderType, type MenuItem } from "@/lib/constants";
 import {
   calculateRoadDistance,
   calculateDeliveryFee,
@@ -37,6 +37,46 @@ export default function HomePage() {
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
   const [deliveryFee, setDeliveryFee] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [distanceError, setDistanceError] = useState<string | null>(null);
+
+  // Restore cart and customer data from sessionStorage on mount
+  useEffect(() => {
+    try {
+      const savedCart = sessionStorage.getItem("himeal_cart");
+      if (savedCart) {
+        const parsed = JSON.parse(savedCart);
+        if (parsed && typeof parsed === "object") setCart(parsed);
+      }
+      const savedCustomer = sessionStorage.getItem("himeal_customer");
+      if (savedCustomer) {
+        const c = JSON.parse(savedCustomer);
+        if (c.customerName) setCustomerName(c.customerName);
+        if (c.customerPhone) setCustomerPhone(c.customerPhone);
+        if (c.address) setAddress(c.address);
+        if (c.addressNotes) setAddressNotes(c.addressNotes);
+        if (typeof c.selectedLat === "number") setSelectedLat(c.selectedLat);
+        if (typeof c.selectedLng === "number") setSelectedLng(c.selectedLng);
+        if (typeof c.distanceKm === "number") setDistanceKm(c.distanceKm);
+        if (typeof c.deliveryFee === "number") setDeliveryFee(c.deliveryFee);
+        if (c.orderType) setOrderType(c.orderType);
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }, []);
+
+  // Persist cart to sessionStorage on every change
+  useEffect(() => {
+    sessionStorage.setItem("himeal_cart", JSON.stringify(cart));
+  }, [cart]);
+
+  // Persist customer data to sessionStorage on every change
+  useEffect(() => {
+    sessionStorage.setItem("himeal_customer", JSON.stringify({
+      customerName, customerPhone, address, addressNotes,
+      selectedLat, selectedLng, distanceKm, deliveryFee, orderType,
+    }));
+  }, [customerName, customerPhone, address, addressNotes, selectedLat, selectedLng, distanceKm, deliveryFee, orderType]);
 
   useEffect(() => {
     fetch("/api/products")
@@ -84,22 +124,39 @@ export default function HomePage() {
   const recalcDistance = useCallback(async (lat: number, lng: number) => {
     try {
       const dist = await calculateRoadDistance(lat, lng);
+      const roundedDist = Math.round(dist * 100) / 100;
+      if (roundedDist > DELIVERY_CONFIG.maxDistanceKm) {
+        setDistanceKm(roundedDist);
+        setDeliveryFee(0);
+        setDistanceError(`Jarak ${roundedDist} km melebihi batas maksimum ${DELIVERY_CONFIG.maxDistanceKm} km.`);
+        return;
+      }
       const fee = calculateDeliveryFee(dist);
-      setDistanceKm(Math.round(dist * 100) / 100);
+      setDistanceKm(roundedDist);
       setDeliveryFee(fee);
+      setDistanceError(null);
     } catch {
       toast.error("Gagal menghitung jarak. Coba lagi.");
       setDistanceKm(null);
       setDeliveryFee(0);
+      setDistanceError(null);
     }
   }, []);
 
   const handleAddressSelect = useCallback(
-    async (addr: string, lat: number, lng: number) => {
+    async (addr: string, lat: number | null, lng: number | null) => {
       setAddress(addr);
-      setSelectedLat(lat);
-      setSelectedLng(lng);
-      await recalcDistance(lat, lng);
+      if (lat !== null && lng !== null) {
+        setSelectedLat(lat);
+        setSelectedLng(lng);
+        await recalcDistance(lat, lng);
+      } else {
+        // Manual typing without coordinates - reset distance/fee
+        setSelectedLat(undefined);
+        setSelectedLng(undefined);
+        setDistanceKm(null);
+        setDeliveryFee(0);
+      }
     },
     [recalcDistance]
   );
@@ -131,6 +188,10 @@ export default function HomePage() {
     }
     if (orderType === "delivery" && !address.trim()) {
       toast.error("Alamat pengantaran wajib diisi");
+      return;
+    }
+    if (orderType === "delivery" && distanceError) {
+      toast.error("Jarak melebihi batas maksimum pengantaran");
       return;
     }
 
@@ -368,13 +429,14 @@ export default function HomePage() {
                     setDistanceKm(null);
                     setDeliveryFee(0);
                   }}
+                  onAddressResolved={(addr) => setAddress(addr)}
                   selectedLat={selectedLat}
                   selectedLng={selectedLng}
                 />
               </div>
 
               {/* Distance & Fee Info */}
-              {distanceKm !== null && distanceKm > 0 && (
+              {distanceKm !== null && distanceKm > 0 && !distanceError && (
                 <div className="botanical-card rounded-xl p-5 flex items-center justify-between">
                   <div>
                     <p className="text-xs text-on-surface-variant">Jarak (via jalan)</p>
@@ -390,6 +452,28 @@ export default function HomePage() {
                       {deliveryFee === 0 ? "GRATIS" : formatCurrency(deliveryFee)}
                     </p>
                   </div>
+                </div>
+              )}
+
+              {/* Distance exceeds max limit */}
+              {distanceError && (
+                <div className="bg-error/10 border border-error/30 rounded-xl p-5 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <span className="material-symbols-outlined text-error text-lg mt-0.5">warning</span>
+                    <div>
+                      <p className="text-sm text-error font-semibold">{distanceError}</p>
+                      <p className="text-xs text-on-surface-variant mt-1">Untuk pemesanan jarak jauh, silakan hubungi admin.</p>
+                    </div>
+                  </div>
+                  <a
+                    href={`https://wa.me/6287777527426?text=${encodeURIComponent(`Halo admin HiMeal, saya ingin pesan tapi jarak saya ${distanceKm} km. Apakah bisa diantar?`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 bg-[#25D366] text-white px-5 py-2.5 rounded-full text-xs font-bold hover:opacity-90 transition-opacity active:scale-95"
+                  >
+                    <span className="material-symbols-outlined text-sm">chat</span>
+                    Hubungi via WhatsApp
+                  </a>
                 </div>
               )}
             </>

@@ -24,6 +24,8 @@ export async function PATCH(
       image: body.image,
       is_active: body.is_active,
       sort_order: body.sort_order,
+      is_out_of_stock: body.isOutOfStock !== undefined ? (body.isOutOfStock ? 1 : 0) : undefined,
+      max_order_qty: body.maxOrderQty,
     });
 
     return NextResponse.json(updated);

@@ -2,9 +2,13 @@
 
 import { useState, useCallback } from "react";
 
+const ORS_API_KEY =
+  "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjZlYTBkZTFjMjI1OTRhMTI5NTMzMzRlMjFmMTE2YzhmIiwiaCI6Im11cm11cjY0In0=";
+
 interface DeliveryMapProps {
   onLocationSelect: (lat: number, lng: number) => void;
   onLocationClear?: () => void;
+  onAddressResolved?: (address: string) => void;
   selectedLat?: number;
   selectedLng?: number;
 }
@@ -31,9 +35,24 @@ function isShortLink(url: string): boolean {
   return url.includes("maps.app.goo.gl") || url.includes("goo.gl/maps");
 }
 
+async function reverseGeocode(lat: number, lng: number): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://api.openrouteservice.org/geocode/reverse?point.lat=${lat}&point.lon=${lng}&size=1`,
+      { headers: { Authorization: ORS_API_KEY, Accept: "application/json" } }
+    );
+    const data = await res.json();
+    const label = data?.features?.[0]?.properties?.label;
+    return typeof label === "string" ? label : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function DeliveryMap({
   onLocationSelect,
   onLocationClear,
+  onAddressResolved,
   selectedLat,
   selectedLng,
 }: DeliveryMapProps) {
@@ -79,6 +98,9 @@ export default function DeliveryMap({
         onLocationSelect(directCoords.lat, directCoords.lng);
         setShowMap(true);
         setLinkLoading(false);
+        reverseGeocode(directCoords.lat, directCoords.lng).then((addr) => {
+          if (addr) onAddressResolved?.(addr);
+        });
         return;
       }
 
@@ -93,11 +115,17 @@ export default function DeliveryMap({
       if (data.coords) {
         onLocationSelect(data.coords.lat, data.coords.lng);
         setShowMap(true);
+        reverseGeocode(data.coords.lat, data.coords.lng).then((addr) => {
+          if (addr) onAddressResolved?.(addr);
+        });
       } else if (data.finalUrl) {
         const resolved = extractCoordsFromUrl(data.finalUrl);
         if (resolved) {
           onLocationSelect(resolved.lat, resolved.lng);
           setShowMap(true);
+          reverseGeocode(resolved.lat, resolved.lng).then((addr) => {
+            if (addr) onAddressResolved?.(addr);
+          });
         } else {
           setLinkError("Tidak dapat membaca koordinat. Coba klik lokasi spesifik di Google Maps lalu share.");
         }
@@ -127,9 +155,13 @@ export default function DeliveryMap({
 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        onLocationSelect(pos.coords.latitude, pos.coords.longitude);
+        const { latitude, longitude } = pos.coords;
+        onLocationSelect(latitude, longitude);
         setShowMap(true);
         setGpsLoading(false);
+        reverseGeocode(latitude, longitude).then((addr) => {
+          if (addr) onAddressResolved?.(addr);
+        });
       },
       (err) => {
         setGpsLoading(false);

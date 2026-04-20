@@ -8,7 +8,28 @@ export async function GET(request: NextRequest) {
 
   try {
     const orders = getAllOrders();
-    return NextResponse.json(orders);
+
+    // Payment status filter
+    const { searchParams } = new URL(request.url);
+    const paymentStatusFilter = searchParams.get("payment_status") || "all";
+
+    const filtered =
+      paymentStatusFilter === "all"
+        ? orders
+        : orders.filter((o) => o.payment_status === paymentStatusFilter);
+
+    // Count per payment status
+    const paymentStatusCount = {
+      all: orders.length,
+      pending: orders.filter((o) => o.payment_status === "pending").length,
+      success: orders.filter((o) => o.payment_status === "success").length,
+      expired: orders.filter((o) => o.payment_status === "expired").length,
+    };
+
+    return NextResponse.json({
+      orders: filtered,
+      paymentStatusCount,
+    });
   } catch (error) {
     console.error("[GET /api/admin/orders]", error);
     return NextResponse.json(

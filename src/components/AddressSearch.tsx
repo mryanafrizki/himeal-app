@@ -14,7 +14,7 @@ interface GeoResult {
 
 interface AddressSearchProps {
   value: string;
-  onChange: (address: string, lat: number, lng: number) => void;
+  onChange: (address: string, lat: number | null, lng: number | null) => void;
 }
 
 export default function AddressSearch({ value, onChange }: AddressSearchProps) {
@@ -24,6 +24,7 @@ export default function AddressSearch({ value, onChange }: AddressSearchProps) {
   const [isLoading, setIsLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const lastSelectedRef = useRef<string>(value);
 
   useEffect(() => {
     setQuery(value);
@@ -87,9 +88,20 @@ export default function AddressSearch({ value, onChange }: AddressSearchProps) {
 
   function handleSelect(result: GeoResult) {
     setQuery(result.label);
+    lastSelectedRef.current = result.label;
     setIsOpen(false);
     setResults([]);
     onChange(result.label, result.lat, result.lng);
+  }
+
+  function handleBlur() {
+    // Delay to allow click on suggestion to fire first
+    setTimeout(() => {
+      if (query.trim() && query !== lastSelectedRef.current) {
+        lastSelectedRef.current = query;
+        onChange(query, null, null);
+      }
+    }, 200);
   }
 
   return (
@@ -102,6 +114,7 @@ export default function AddressSearch({ value, onChange }: AddressSearchProps) {
           value={query}
           onChange={(e) => handleInputChange(e.target.value)}
           onFocus={() => results.length > 0 && setIsOpen(true)}
+          onBlur={handleBlur}
           placeholder="Ketik alamat, nama tempat, atau jalan..."
           className="w-full !pl-12 pr-10 py-4 bg-surface-container border-none rounded-2xl text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary shadow-inner"
         />

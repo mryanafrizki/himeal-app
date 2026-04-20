@@ -11,6 +11,8 @@ export async function GET() {
         price: p.price,
         description: p.description,
         image: p.image,
+        is_out_of_stock: p.is_out_of_stock,
+        max_order_qty: p.max_order_qty,
       }))
     );
   } catch (error) {

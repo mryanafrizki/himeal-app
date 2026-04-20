@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getOrder, updateOrderPayment } from "@/lib/db";
+import { getOrder, updateOrderPayment, getStoreSettings, updateOrderQrisInfo } from "@/lib/db";
 import { createQRIS } from "@/lib/atlantic";
 import {
   sendTelegramNotification,
@@ -30,8 +30,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create QRIS payment
-    const result = await createQRIS(body.orderId, order.total);
+    // Check QRIS settings
+    const storeSettings = getStoreSettings();
+    if (!storeSettings.qris_enabled) {
+      return NextResponse.json(
+        { error: "QRIS tidak aktif" },
+        { status: 400 }
+      );
+    }
+
+    // Generate unique code and calculate fee
+    const uniqueCode = Math.floor(Math.random() * 99) + 1; // 1-99
+    const qrisFee = Math.ceil(order.total * 0.007) + 200;
+
+    let nominal: number;
+    if (storeSettings.qris_fee_mode === "user") {
+      nominal = order.total + qrisFee + uniqueCode;
+    } else {
+      // admin mode (default)
+      nominal = order.total + uniqueCode;
+    }
+
+    // Save QRIS info to order
+    updateOrderQrisInfo(body.orderId, uniqueCode, qrisFee);
+
+    // Create QRIS payment with calculated nominal
+    const result = await createQRIS(body.orderId, nominal);
 
     if (!result.status || !result.data) {
       return NextResponse.json(
@@ -81,6 +105,8 @@ export async function POST(request: NextRequest) {
       qrString: result.data.qr_string,
       expiresAt,
       orderId: body.orderId,
+      uniqueCode,
+      nominal,
     });
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error);
