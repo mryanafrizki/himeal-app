@@ -45,7 +45,7 @@ interface Order {
 }
 
 type Tab = "menu" | "pesanan";
-type PaymentSubTab = "success" | "pending";
+type PaymentSubTab = "success" | "pending" | "cancelled";
 
 const STATUS_FLOW: OrderStatus[] = ["confirmed", "preparing", "ready" as OrderStatus, "delivering", "delivered"];
 
@@ -145,6 +145,7 @@ export default function AdminDashboardPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [paidOrders, setPaidOrders] = useState<Order[]>([]);
   const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
+  const [cancelledOrders, setCancelledOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [adminKey, setAdminKey] = useState("");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -194,9 +195,21 @@ export default function AdminDashboardPage() {
     } catch { /* ignore */ }
   }, [adminKey, router]);
 
+  const fetchCancelledOrders = useCallback(async () => {
+    if (!adminKey) return;
+    try {
+      const res = await fetch("/api/admin/orders?payment_status=cancelled", {
+        headers: { "x-admin-key": adminKey },
+      });
+      if (res.status === 401) { router.push("/admin"); return; }
+      const data = await res.json();
+      setCancelledOrders(Array.isArray(data) ? data : data.orders || []);
+    } catch { /* ignore */ }
+  }, [adminKey, router]);
+
   const fetchAllOrders = useCallback(async () => {
-    await Promise.all([fetchPaidOrders(), fetchPendingOrders()]);
-  }, [fetchPaidOrders, fetchPendingOrders]);
+    await Promise.all([fetchPaidOrders(), fetchPendingOrders(), fetchCancelledOrders()]);
+  }, [fetchPaidOrders, fetchPendingOrders, fetchCancelledOrders]);
 
   useEffect(() => {
     if (!adminKey) return;
@@ -248,7 +261,7 @@ export default function AdminDashboardPage() {
     router.push("/admin");
   };
 
-  const orders = paymentSubTab === "success" ? paidOrders : pendingOrders;
+  const orders = paymentSubTab === "success" ? paidOrders : paymentSubTab === "pending" ? pendingOrders : cancelledOrders;
   const activeOrderCount = paidOrders.filter((o) =>
     ["confirmed", "preparing", "ready", "delivering"].includes(o.order_status)
   ).length;
@@ -472,6 +485,24 @@ export default function AdminDashboardPage() {
                         {pendingOrders.length}
                       </span>
                     )}
+                   </span>
+                </button>
+                <button
+                  onClick={() => setPaymentSubTab("cancelled")}
+                  className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                    paymentSubTab === "cancelled"
+                      ? "bg-red-900/40 text-red-300"
+                      : "text-on-surface-variant hover:text-on-surface"
+                  }`}
+                >
+                  <span className="flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-sm">cancel</span>
+                    Dibatalkan
+                    {cancelledOrders.length > 0 && (
+                      <span className="bg-red-900/40 text-red-300 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                        {cancelledOrders.length}
+                      </span>
+                    )}
                   </span>
                 </button>
               </div>
@@ -618,12 +649,14 @@ export default function AdminDashboardPage() {
               {orders.length === 0 && (
                 <div className="text-center py-12 text-on-surface-variant">
                   <span className="material-symbols-outlined text-4xl mb-2 block">
-                    {paymentSubTab === "success" ? "inbox" : "hourglass_empty"}
+                    {paymentSubTab === "success" ? "inbox" : paymentSubTab === "pending" ? "hourglass_empty" : "cancel"}
                   </span>
                   <p className="font-body">
                     {paymentSubTab === "success"
                       ? "Belum ada pesanan yang sudah dibayar."
-                      : "Tidak ada pesanan menunggu pembayaran."}
+                      : paymentSubTab === "pending"
+                      ? "Tidak ada pesanan menunggu pembayaran."
+                      : "Tidak ada pesanan yang dibatalkan."}
                   </p>
                 </div>
               )}

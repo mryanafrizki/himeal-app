@@ -29,29 +29,38 @@ export async function POST(request: NextRequest) {
     if (!body.code || typeof body.code !== "string") {
       return NextResponse.json({ error: "Code is required" }, { status: 400 });
     }
-    if (!body.discountType || !["percentage", "fixed"].includes(body.discountType)) {
+    // Accept both camelCase and snake_case field names
+    const discountType = body.discountType || body.discount_type;
+    const discountValue = body.discountValue ?? body.discount_value;
+    const maxDiscount = body.maxDiscount ?? body.max_discount;
+    const minOrder = body.minOrder ?? body.min_order;
+    const quota = body.quota;
+    const validFrom = body.validFrom || body.start_date;
+    const validUntil = body.validUntil || body.end_date;
+
+    if (!discountType || !["percentage", "fixed"].includes(discountType)) {
       return NextResponse.json({ error: "Valid discount type is required (percentage or fixed)" }, { status: 400 });
     }
-    if (!body.discountValue || typeof body.discountValue !== "number" || body.discountValue <= 0) {
+    if (!discountValue || typeof discountValue !== "number" || discountValue <= 0) {
       return NextResponse.json({ error: "Valid discount value is required" }, { status: 400 });
     }
-    if (!body.quota || typeof body.quota !== "number" || body.quota <= 0) {
+    if (!quota || typeof quota !== "number" || quota <= 0) {
       return NextResponse.json({ error: "Valid quota is required" }, { status: 400 });
     }
-    if (!body.validFrom || !body.validUntil) {
+    if (!validFrom || !validUntil) {
       return NextResponse.json({ error: "Valid date range is required" }, { status: 400 });
     }
 
     const voucher = createVoucher({
       id: nanoid(12),
       code: body.code.toUpperCase().trim(),
-      discount_type: body.discountType,
-      discount_value: body.discountValue,
-      max_discount: body.maxDiscount || null,
-      min_order: body.minOrder || 0,
-      quota: body.quota,
-      valid_from: body.validFrom,
-      valid_until: body.validUntil,
+      discount_type: discountType,
+      discount_value: discountValue,
+      max_discount: maxDiscount || null,
+      min_order: minOrder || 0,
+      quota,
+      valid_from: validFrom,
+      valid_until: validUntil,
     });
 
     return NextResponse.json(voucher, { status: 201 });

@@ -10,6 +10,7 @@ import {
 } from "@/lib/delivery";
 import MenuCard, { type Addon } from "@/components/MenuCard";
 // AddressSearch removed — using plain input
+import StorePopup from "@/components/StorePopup";
 import CartSummary from "@/components/CartSummary";
 import DeliveryMap from "@/components/DeliveryMap";
 
@@ -82,6 +83,7 @@ export default function HomePage() {
   const [storeOpen, setStoreOpen] = useState(true);
   const [storeMessage, setStoreMessage] = useState("");
   const [nextOpen, setNextOpen] = useState("");
+  const [showInfoPopup, setShowInfoPopup] = useState(false);
 
   // FEAT-14: Restore saved customer data from localStorage
   useEffect(() => {
@@ -171,6 +173,12 @@ export default function HomePage() {
         else if (data.mode === "info") setStoreMessage(data.infoMessage || "");
         else if (data.mode === "closed") setStoreMessage("Toko sedang tutup.");
         if (data.nextOpenDay && data.nextOpenTime) setNextOpen(`Buka ${data.nextOpenDay} ${data.nextOpenTime}`);
+        // Show info popup if not dismissed today
+        if (data.mode === "info" && data.infoMessage) {
+          const dismissed = localStorage.getItem("himeal_info_dismissed");
+          const today = new Date().toISOString().slice(0, 10);
+          if (dismissed !== today) setShowInfoPopup(true);
+        }
       })
       .catch(() => {});
   }, []);
@@ -470,34 +478,15 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* Store status banner */}
-      {(storeMode === "maintenance" || storeMode === "closed" || (storeMode === "info" && storeMessage)) && (
-        <div className={`px-6 py-3 text-center text-sm font-medium ${
-          storeMode === "maintenance" ? "bg-error-container/30 text-error" :
-          storeMode === "closed" ? "bg-error-container/30 text-error" :
-          "bg-tertiary-container/30 text-tertiary"
-        }`}>
-          <span className="material-symbols-outlined text-sm align-middle mr-1.5" style={{ fontVariationSettings: "'FILL' 1" }}>
-            {storeMode === "maintenance" ? "construction" : storeMode === "closed" ? "lock" : "info"}
-          </span>
-          {storeMessage}
-          {nextOpen && <span className="ml-2 opacity-70">({nextOpen})</span>}
-        </div>
-      )}
+      {/* Store mode popups */}
+      <StorePopup
+        mode={storeMode}
+        message={storeMessage}
+        nextOpen={nextOpen}
+        showInfoPopup={showInfoPopup}
+        onDismissInfo={() => setShowInfoPopup(false)}
+      />
 
-      {/* Maintenance/closed overlay - block ordering */}
-      {(storeMode === "maintenance" || storeMode === "closed" || !storeOpen) && storeMode !== "info" && storeMode !== "open" ? (
-        <main className="px-6 lg:px-8 pb-32 max-w-6xl mx-auto flex flex-col items-center justify-center min-h-[60vh] text-center gap-4">
-          <span className="material-symbols-outlined text-6xl text-outline" style={{ fontVariationSettings: "'FILL' 1" }}>
-            {storeMode === "maintenance" ? "construction" : "lock"}
-          </span>
-          <h2 className="text-2xl font-headline font-bold text-on-surface">
-            {storeMode === "maintenance" ? "Sedang Maintenance" : "Toko Tutup"}
-          </h2>
-          <p className="text-on-surface-variant max-w-sm">{storeMessage}</p>
-          {nextOpen && <p className="text-primary font-medium">{nextOpen}</p>}
-        </main>
-      ) : (
       <main className="px-6 lg:px-8 space-y-10 pb-32 max-w-6xl mx-auto">
         {/* Task 7: Hero Section - Auto-sliding carousel or static fallback */}
         <section className="mt-4 animate-fade-in">
@@ -938,7 +927,6 @@ export default function HomePage() {
           );
         })()}
       </main>
-      )}
 
       {/* Fun floating animation */}
       <div className="relative overflow-hidden py-8">
