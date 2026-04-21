@@ -519,7 +519,7 @@ export default function HomePage() {
               >
                 {heroSlides.map((slide) => (
                   <div key={slide.id} className="snap-start shrink-0 w-full relative h-48 rounded-3xl overflow-hidden">
-                    <img src={slide.image} alt={slide.title || "HiMeal"} className="w-full h-full object-cover" loading="lazy" />
+                    <img src={slide.image} alt={slide.title || "HiMeal"} className="w-full h-full object-cover animate-ken-burns-slow" loading="lazy" />
                     <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
                     <div className="absolute bottom-6 left-6">
                       {slide.subtitle && <span className="text-xs font-label uppercase tracking-widest text-primary font-bold">{slide.subtitle}</span>}

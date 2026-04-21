@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { formatCurrency } from "@/lib/constants";
 
 export default function NewProductPage() {
@@ -12,6 +13,7 @@ export default function NewProductPage() {
   const [description, setDescription] = useState("");
   const [image, setImage] = useState("");
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -121,17 +123,53 @@ export default function NewProductPage() {
             />
           </div>
 
-          {/* Image URL */}
-          <div className="space-y-2">
+          {/* Image Upload / URL */}
+          <div className="space-y-3">
             <label className="font-label text-xs uppercase tracking-widest text-on-surface-variant font-medium">
-              URL Gambar
+              Gambar
             </label>
+
+            {/* Upload button */}
+            <div className="flex gap-3">
+              <label className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-surface-container-low rounded-xl text-sm cursor-pointer hover:bg-surface-container transition-colors border border-dashed border-outline-variant/30 ${uploading ? "opacity-50 pointer-events-none" : ""}`}>
+                <span className="material-symbols-outlined text-lg text-primary">upload</span>
+                <span className="text-on-surface-variant">{uploading ? "Mengupload..." : "Upload Gambar"}</span>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif"
+                  className="hidden"
+                  disabled={uploading}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.size > 2 * 1024 * 1024) { toast.error("Ukuran file maksimal 2MB"); return; }
+                    setUploading(true);
+                    try {
+                      const fd = new FormData();
+                      fd.append("file", file);
+                      const res = await fetch("/api/admin/upload", { method: "POST", headers: { "x-admin-key": adminKey }, body: fd });
+                      const data = await res.json();
+                      if (res.ok && data.url) { setImage(data.url); toast.success("Gambar berhasil diupload"); }
+                      else { toast.error(data.error || "Upload gagal"); }
+                    } catch { toast.error("Upload gagal"); }
+                    finally { setUploading(false); e.target.value = ""; }
+                  }}
+                />
+              </label>
+            </div>
+
+            {/* Or paste URL */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px bg-outline-variant/20" />
+              <span className="text-[10px] text-outline uppercase tracking-widest">atau tempel URL</span>
+              <div className="flex-1 h-px bg-outline-variant/20" />
+            </div>
             <input
               type="url"
               value={image}
               onChange={(e) => setImage(e.target.value)}
               placeholder="https://images.unsplash.com/..."
-              className="w-full px-4 py-4 bg-surface-container border-none rounded-2xl text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary"
+              className="w-full px-4 py-3 bg-surface-container-low border-none rounded-xl text-sm text-on-surface focus:ring-1 focus:ring-primary"
             />
           </div>
 

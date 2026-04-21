@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import type { MenuItem } from "@/lib/constants";
 import { formatCurrency } from "@/lib/constants";
 import { toast } from "sonner";
+import ImageViewer from "./ImageViewer";
 
 export interface Addon {
   id: string;
@@ -63,6 +64,7 @@ export default function MenuCard({
   onAddonsChange,
 }: MenuCardProps) {
   const [addons, setAddons] = useState<Addon[]>([]);
+  const [viewerOpen, setViewerOpen] = useState(false);
   const isOutOfStock = item.is_out_of_stock === 1;
   const maxQty = item.max_order_qty && item.max_order_qty > 0 ? item.max_order_qty : 0;
 
@@ -127,11 +129,18 @@ export default function MenuCard({
       )}
 
       {/* Image */}
-      <div className="relative h-40 rounded-2xl overflow-hidden">
+      <div
+        className="relative h-40 rounded-2xl overflow-hidden cursor-pointer"
+        onClick={() => !isOutOfStock && setViewerOpen(true)}
+        role={isOutOfStock ? undefined : "button"}
+        tabIndex={isOutOfStock ? undefined : 0}
+        onKeyDown={(e) => { if (!isOutOfStock && (e.key === "Enter" || e.key === " ")) setViewerOpen(true); }}
+        aria-label={isOutOfStock ? undefined : `Lihat gambar ${item.name}`}
+      >
         <img
           src={item.image}
           alt={item.name}
-          className={`w-full h-full object-cover ${isOutOfStock ? "grayscale" : ""}`}
+          className={`w-full h-full object-cover ${isOutOfStock ? "grayscale" : "animate-ken-burns"}`}
           loading="lazy"
         />
         {isOutOfStock && (
@@ -141,7 +150,22 @@ export default function MenuCard({
             </span>
           </div>
         )}
+        {/* Expand hint icon */}
+        {!isOutOfStock && (
+          <div className="absolute bottom-2 right-2 w-7 h-7 flex items-center justify-center rounded-full bg-black/40 text-white/70 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+            <span className="material-symbols-outlined text-sm">fullscreen</span>
+          </div>
+        )}
       </div>
+
+      {/* Fullscreen image viewer */}
+      {viewerOpen && (
+        <ImageViewer
+          src={item.image}
+          alt={item.name}
+          onClose={() => setViewerOpen(false)}
+        />
+      )}
 
       {/* Content */}
       <div className="space-y-2">

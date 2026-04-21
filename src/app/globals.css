@@ -200,5 +200,33 @@ textarea::placeholder {
 }
 .animate-shake { animation: shake 0.5s ease-in-out; }
 
+/* ===== Ken-Burns Vertical Pan ===== */
+@keyframes ken-burns-vertical {
+  0% { transform: scale(1.15) translateY(-5%); }
+  50% { transform: scale(1.15) translateY(5%); }
+  100% { transform: scale(1.15) translateY(-5%); }
+}
+@keyframes ken-burns-vertical-slow {
+  0% { transform: scale(1.12) translateY(-4%); }
+  50% { transform: scale(1.12) translateY(4%); }
+  100% { transform: scale(1.12) translateY(-4%); }
+}
+
+.animate-ken-burns { animation: ken-burns-vertical 14s ease-in-out infinite; }
+.animate-ken-burns-slow { animation: ken-burns-vertical-slow 20s ease-in-out infinite; }
+
+/* ===== Fullscreen Image Viewer ===== */
+@keyframes viewer-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes viewer-image-in {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-viewer-backdrop { animation: viewer-backdrop-in 0.3s ease both; }
+.animate-viewer-image { animation: viewer-image-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.05s both; }
+
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
