@@ -228,5 +228,12 @@ textarea::placeholder {
 .animate-viewer-backdrop { animation: viewer-backdrop-in 0.3s ease both; }
 .animate-viewer-image { animation: viewer-image-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.05s both; }
 
+/* ===== Progress Bar Shimmer ===== */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.animate-shimmer { animation: shimmer 1.5s ease-in-out infinite; }
+
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

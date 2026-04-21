@@ -493,14 +493,15 @@ export default function CheckoutPage() {
                         <div className="flex flex-wrap gap-1.5 mt-1.5">
                           {/* Selected addons with qty controls */}
                           {item.addons.map((a) => (
-                            <div key={a.id} className="inline-flex items-center gap-1 bg-primary/10 border border-primary/20 rounded-full pl-2.5 pr-1 py-0.5">
-                              <span className="text-[10px] text-primary font-medium">{a.name} +{formatCurrency(a.price)}{a.qty > 1 ? ` x${a.qty}` : ""}</span>
-                              <div className="flex items-center gap-0.5">
-                                <button type="button" onClick={() => updateItemAddonQty(i, a.id, (a.qty || 1) - 1)} className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-error-container/30 text-primary active:scale-90 transition-transform">
-                                  <span className="material-symbols-outlined" style={{ fontSize: "10px" }}>{(a.qty || 1) <= 1 ? "close" : "remove"}</span>
+                            <div key={a.id} className="inline-flex items-center gap-1.5 bg-primary/10 border border-primary/20 rounded-xl px-3 py-1.5">
+                              <span className="text-xs text-primary font-medium">{a.name} +{formatCurrency(a.price)}</span>
+                              <div className="flex items-center gap-1 ml-1">
+                                <button type="button" onClick={() => updateItemAddonQty(i, a.id, (a.qty || 1) - 1)} className="w-7 h-7 flex items-center justify-center rounded-lg bg-primary/10 hover:bg-error-container/30 hover:text-error text-primary active:scale-90 transition-all">
+                                  <span className="material-symbols-outlined text-sm">{(a.qty || 1) <= 1 ? "close" : "remove"}</span>
                                 </button>
-                                <button type="button" onClick={() => updateItemAddonQty(i, a.id, (a.qty || 1) + 1)} className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-primary-container/30 text-primary active:scale-90 transition-transform">
-                                  <span className="material-symbols-outlined" style={{ fontSize: "10px" }}>add</span>
+                                <span className="w-5 text-center text-xs font-bold text-primary">{a.qty || 1}</span>
+                                <button type="button" onClick={() => updateItemAddonQty(i, a.id, (a.qty || 1) + 1)} className="w-7 h-7 flex items-center justify-center rounded-lg bg-primary/10 hover:bg-primary-container/50 text-primary active:scale-90 transition-all">
+                                  <span className="material-symbols-outlined text-sm">add</span>
                                 </button>
                               </div>
                             </div>
@@ -511,31 +512,31 @@ export default function CheckoutPage() {
                               key={a.id}
                               type="button"
                               onClick={() => addAddonToItem(i, a)}
-                              className="inline-flex items-center gap-1 border border-outline-variant/30 rounded-full pl-2.5 pr-1.5 py-0.5 hover:border-primary/40 hover:bg-primary/5 transition-colors active:scale-95"
+                              className="inline-flex items-center gap-1.5 border border-outline-variant/30 rounded-xl px-3 py-1.5 hover:border-primary/40 hover:bg-primary/5 transition-colors active:scale-95"
                             >
-                              <span className="text-[10px] text-on-surface-variant">{a.name} +{formatCurrency(a.price)}</span>
-                              <span className="material-symbols-outlined text-on-surface-variant" style={{ fontSize: "12px" }}>add</span>
+                              <span className="text-xs text-on-surface-variant">{a.name} +{formatCurrency(a.price)}</span>
+                              <span className="material-symbols-outlined text-primary text-sm">add_circle</span>
                             </button>
                           ))}
                         </div>
                       );
                     })()}
-                    {/* Task 1: Qty +/- controls */}
-                    <div className="mt-2 flex items-center gap-1">
+                    {/* Qty +/- controls */}
+                    <div className="mt-3 flex items-center gap-2">
                       <button
                         type="button"
                         onClick={() => updateItemQty(i, -1)}
-                        className="w-7 h-7 flex items-center justify-center rounded-full bg-surface-container-highest text-on-surface-variant active:scale-90 transition-transform"
+                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container-highest text-on-surface-variant hover:bg-error-container/30 hover:text-error active:scale-90 transition-all"
                       >
-                        <span className="material-symbols-outlined text-sm">remove</span>
+                        <span className="material-symbols-outlined text-lg">remove</span>
                       </button>
-                      <span className="px-3 font-bold text-primary text-sm">{item.quantity}</span>
+                      <span className="w-8 text-center font-headline font-bold text-primary text-lg">{item.quantity}</span>
                       <button
                         type="button"
                         onClick={() => updateItemQty(i, 1)}
-                        className="w-7 h-7 flex items-center justify-center rounded-full bg-surface-container-highest text-on-surface active:scale-90 transition-transform"
+                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-primary-container text-on-primary-container hover:opacity-90 active:scale-90 transition-all"
                       >
-                        <span className="material-symbols-outlined text-sm">add</span>
+                        <span className="material-symbols-outlined text-lg">add</span>
                       </button>
                     </div>
                   </div>

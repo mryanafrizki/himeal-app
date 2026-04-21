@@ -490,8 +490,8 @@ export default function OrderTrackingPage() {
                   {addons.length > 0 && (
                     <div className="ml-20 flex flex-wrap gap-1.5">
                       {addons.map((a, ai) => (
-                        <span key={ai} className="text-[10px] bg-surface-container-highest text-on-surface-variant rounded-full px-2.5 py-0.5">
-                          {a.addon_name}{a.quantity > 1 ? ` x${a.quantity}` : ""} +{formatCurrency(a.addon_price * a.quantity)}
+                        <span key={ai} className="text-[11px] bg-primary/10 border border-primary/20 text-primary font-medium rounded-full px-2.5 py-0.5">
+                          {a.addon_name} {a.quantity > 1 && <span className="font-bold">x{a.quantity}</span>} +{formatCurrency(a.addon_price * a.quantity)}
                         </span>
                       ))}
                     </div>

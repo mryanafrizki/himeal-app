@@ -55,11 +55,15 @@ export default function OrderTracker({
           <div className="relative z-10">
             <p className="font-label text-xs uppercase tracking-[0.1em] text-on-surface-variant mb-2">Waktu Kedatangan</p>
             <h2 className="font-headline text-4xl font-extrabold text-primary tracking-tighter">Estimasi: ~{estimatedMinutes} menit</h2>
-            <div className="mt-6 h-2 w-full bg-surface-container-highest rounded-full overflow-hidden flex gap-1">
+            <div className="mt-6 h-2.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-primary to-primary-container rounded-full"
+                className="h-full bg-gradient-to-r from-primary to-primary-container rounded-full transition-all duration-1000 ease-out relative overflow-hidden"
                 style={{ width: `${Math.min(100, ((currentIndex + 1) / STEPS.length) * 100)}%` }}
-              />
+              >
+                {currentIndex < STEPS.length - 1 && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
+                )}
+              </div>
             </div>
           </div>
         </section>
