@@ -24,12 +24,23 @@ interface OrderData {
   order_status: OrderStatus;
   payment_status: string;
   created_at: string;
+  voucher_discount: number;
+  confirmed_at?: string | null;
+  preparing_at?: string | null;
+  ready_at?: string | null;
+  delivering_at?: string | null;
+  delivered_at?: string | null;
   items: Array<{
     product_name: string;
     quantity: number;
     price: number;
     notes: string | null;
     product_image?: string;
+    addons?: Array<{
+      addon_name: string;
+      addon_price: number;
+      quantity: number;
+    }>;
   }>;
 }
 
@@ -284,6 +295,8 @@ export default function OrderTrackingPage() {
     );
   }
 
+  const isPickup = order.customer_address.startsWith("Pickup") || order.customer_address.startsWith("Takeaway") || order.delivery_fee === 0;
+
   return (
     <div className="font-body selection:bg-primary-container selection:text-on-primary-container">
       {/* TopAppBar */}
@@ -309,7 +322,14 @@ export default function OrderTrackingPage() {
         <OrderTracker
           currentStatus={order.order_status}
           estimatedMinutes={estimatedMinutes ?? undefined}
-          isPickup={order.customer_address.startsWith("Pickup") || order.customer_address.startsWith("Takeaway")}
+          isPickup={isPickup}
+          timestamps={{
+            confirmed_at: order.confirmed_at,
+            preparing_at: order.preparing_at,
+            ready_at: order.ready_at,
+            delivering_at: order.delivering_at,
+            delivered_at: order.delivered_at,
+          }}
         />
 
         {/* FEAT-8: Rating Section (when delivered) */}
@@ -443,39 +463,104 @@ export default function OrderTrackingPage() {
             Ringkasan Pesanan
           </h4>
           <div className="space-y-4">
-            {(order.items || []).map((item, i) => (
-              <div key={i} className="flex justify-between items-start">
-                <div className="flex gap-4">
-                  <div className="w-16 h-16 rounded-xl bg-surface-container-high overflow-hidden shrink-0">
-                    {item.product_image ? (
-                      <img src={item.product_image} alt={item.product_name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-primary-container/20 to-surface-container" />
-                    )}
+            {(order.items || []).map((item, i) => {
+              const addons = item.addons || [];
+              const addonTotal = addons.reduce((s, a) => s + a.addon_price * a.quantity, 0);
+              return (
+                <div key={i} className="space-y-1.5">
+                  <div className="flex justify-between items-start">
+                    <div className="flex gap-4">
+                      <div className="w-16 h-16 rounded-xl bg-surface-container-high overflow-hidden shrink-0">
+                        {item.product_image ? (
+                          <img src={item.product_image} alt={item.product_name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-primary-container/20 to-surface-container" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-headline font-bold text-on-surface">{item.product_name}</p>
+                        <p className="text-sm text-on-surface-variant">x{item.quantity}</p>
+                        {item.notes && (
+                          <p className="text-xs text-on-surface-variant mt-0.5 italic">&quot;{item.notes}&quot;</p>
+                        )}
+                      </div>
+                    </div>
+                    <span className="font-headline font-bold text-on-surface">{formatCurrency((item.price + addonTotal) * item.quantity)}</span>
                   </div>
-                  <div>
-                    <p className="font-headline font-bold text-on-surface">{item.product_name}</p>
-                    <p className="text-sm text-on-surface-variant">x{item.quantity}</p>
-                    {item.notes && (
-                      <p className="text-xs text-on-surface-variant mt-0.5">{item.notes}</p>
-                    )}
-                  </div>
+                  {addons.length > 0 && (
+                    <div className="ml-20 flex flex-wrap gap-1.5">
+                      {addons.map((a, ai) => (
+                        <span key={ai} className="text-[10px] bg-surface-container-highest text-on-surface-variant rounded-full px-2.5 py-0.5">
+                          {a.addon_name}{a.quantity > 1 ? ` x${a.quantity}` : ""} +{formatCurrency(a.addon_price * a.quantity)}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <span className="font-headline font-bold text-on-surface">{formatCurrency(item.price * item.quantity)}</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
-          <div className="mt-8 pt-6 border-t border-outline-variant/15 flex justify-between items-center">
-            <span className="font-label text-sm uppercase tracking-widest text-on-surface-variant">Total Pembayaran</span>
-            <span className="font-headline text-2xl font-black text-primary">{formatCurrency(order.total)}</span>
+          {/* Totals breakdown */}
+          <div className="mt-6 pt-4 border-t border-outline-variant/15 space-y-2 text-sm">
+            <div className="flex justify-between text-on-surface-variant">
+              <span>Subtotal</span>
+              <span>{formatCurrency(order.subtotal)}</span>
+            </div>
+            {order.delivery_fee > 0 && (
+              <div className="flex justify-between text-on-surface-variant">
+                <span>Ongkir ({order.distance_km} km)</span>
+                <span>{formatCurrency(order.delivery_fee)}</span>
+              </div>
+            )}
+            {order.voucher_discount > 0 && (
+              <div className="flex justify-between text-primary">
+                <span>Diskon Voucher</span>
+                <span>-{formatCurrency(order.voucher_discount)}</span>
+              </div>
+            )}
+            <div className="pt-3 border-t border-outline-variant/15 flex justify-between items-center">
+              <span className="font-label text-sm uppercase tracking-widest text-on-surface-variant">Total Pembayaran</span>
+              <span className="font-headline text-2xl font-black text-primary">{formatCurrency(order.total)}</span>
+            </div>
           </div>
         </section>
 
         {/* Address */}
         <section className="bg-surface-container-low rounded-3xl p-5 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-          <p className="text-[10px] uppercase font-label tracking-wider text-on-surface-variant mb-2">Alamat Pengantaran</p>
-          <p className="font-headline font-bold text-on-surface">{order.customer_address}</p>
-          <p className="text-sm text-on-surface-variant mt-1">{order.distance_km} km</p>
+          {isPickup ? (
+            <>
+              <p className="text-[10px] uppercase font-label tracking-wider text-on-surface-variant mb-2">Alamat Pengambilan</p>
+              <p className="font-headline font-bold text-on-surface">Ambil ke Toko</p>
+              <p className="text-sm text-on-surface-variant mt-1">Juple&apos;s House, Purwokerto</p>
+              <div className="mt-3 rounded-xl overflow-hidden border border-outline-variant/15" style={{ height: 180 }}>
+                <iframe
+                  src={`https://maps.google.com/maps?q=-7.434855,109.2237517&z=17&output=embed`}
+                  className="w-full h-full border-0"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  title="Lokasi HiMeal"
+                />
+              </div>
+              <a
+                href="https://maps.google.com/maps?q=-7.434855,109.2237517"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 flex items-center gap-2 text-sm text-primary font-semibold hover:underline"
+              >
+                <span className="material-symbols-outlined text-base">map</span>
+                Buka di Google Maps
+                <span className="material-symbols-outlined text-base">open_in_new</span>
+              </a>
+            </>
+          ) : (
+            <>
+              <p className="text-[10px] uppercase font-label tracking-wider text-on-surface-variant mb-2">Alamat Pengantaran</p>
+              <p className="font-headline font-bold text-on-surface">{order.customer_address}</p>
+              {order.distance_km > 0 && (
+                <p className="text-sm text-on-surface-variant mt-1">{order.distance_km} km</p>
+              )}
+            </>
+          )}
         </section>
       </main>
 

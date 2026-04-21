@@ -13,17 +13,18 @@ function fmtRp(amount: number): string {
   return `Rp ${amount.toLocaleString("id-ID")}`;
 }
 
+/** Send a new Telegram message. Returns the message_id or null. */
 export async function sendTelegramNotification(
   message: string
-): Promise<void> {
+): Promise<number | null> {
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
     console.warn("[Telegram] Missing token or chat_id, skipping notification");
-    return;
+    return null;
   }
 
   try {
     const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-    await fetch(url, {
+    const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -33,8 +34,44 @@ export async function sendTelegramNotification(
         disable_web_page_preview: false,
       }),
     });
+    const data = await res.json();
+    if (data.ok && data.result?.message_id) {
+      return data.result.message_id as number;
+    }
+    return null;
   } catch (err) {
     console.error("[Telegram] Notification failed:", err);
+    return null;
+  }
+}
+
+/** Edit an existing Telegram message. Returns true on success. */
+export async function editTelegramMessage(
+  messageId: number,
+  message: string
+): Promise<boolean> {
+  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID || !messageId) {
+    return false;
+  }
+
+  try {
+    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/editMessageText`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: TELEGRAM_CHAT_ID,
+        message_id: messageId,
+        text: message,
+        parse_mode: "HTML",
+        disable_web_page_preview: false,
+      }),
+    });
+    const data = await res.json();
+    return data.ok === true;
+  } catch (err) {
+    console.error("[Telegram] Edit failed:", err);
+    return false;
   }
 }
 
@@ -54,10 +91,14 @@ export interface OrderNotificationData {
   distanceKm: number;
 }
 
-export function buildNewOrderMessage(data: OrderNotificationData): string {
+/** Build the full order message with optional status timeline appended. */
+export function buildOrderMessage(
+  data: OrderNotificationData,
+  statusTimeline?: { status: string; time: string }[]
+): string {
   const isDelivery = data.orderType !== "takeaway";
   const typeLabel = isDelivery ? "DELIVERY" : "PICKUP";
-  const typeIcon = isDelivery ? "🛵" : "🏪"; // only in telegram, not in web UI
+  const typeIcon = isDelivery ? "\u{1F6F5}" : "\u{1F3EA}";
 
   const itemLines = data.items
     .map((i) => {
@@ -67,17 +108,17 @@ export function buildNewOrderMessage(data: OrderNotificationData): string {
     })
     .join("\n");
 
-  let msg = `${typeIcon} <b>PESANAN BARU - ${typeLabel}</b>
-━━━━━━━━━━━━━━━━━━━━
+  let msg = `${typeIcon} <b>PESANAN - ${typeLabel}</b>
+\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
 
 <b>ID Pesanan</b>
 <code>${esc(data.orderId)}</code>
 
-👤 <b>PEMESAN</b>
+\u{1F464} <b>PEMESAN</b>
     Nama: <b>${esc(data.customerName)}</b>
     WA: <b>${esc(data.customerPhone)}</b>
 
-📍 <b>PENGANTARAN</b>
+\u{1F4CD} <b>${isDelivery ? "PENGANTARAN" : "PENGAMBILAN"}</b>
     ${esc(data.customerAddress)}`;
 
   if (data.addressNotes) {
@@ -85,7 +126,7 @@ export function buildNewOrderMessage(data: OrderNotificationData): string {
   }
 
   if (data.customerLat && data.customerLng) {
-    msg += `\n    <a href="https://maps.google.com/maps?q=${data.customerLat},${data.customerLng}">📌 Buka Google Maps</a>`;
+    msg += `\n    <a href="https://maps.google.com/maps?q=${data.customerLat},${data.customerLng}">\u{1F4CC} Buka Google Maps</a>`;
   }
 
   if (isDelivery && data.distanceKm > 0) {
@@ -94,52 +135,58 @@ export function buildNewOrderMessage(data: OrderNotificationData): string {
 
   msg += `
 
-🍽 <b>PESANAN</b>
+\u{1F37D} <b>PESANAN</b>
 ${itemLines}
 
-━━━━━━━━━━━━━━━━━━━━
+\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
     Subtotal:     ${fmtRp(data.subtotal)}
     Ongkir:         ${data.deliveryFee === 0 ? "<b>GRATIS</b>" : fmtRp(data.deliveryFee)}
-━━━━━━━━━━━━━━━━━━━━
+\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
     <b>TOTAL:        ${fmtRp(data.total)}</b>`;
+
+  // Append status timeline if provided
+  if (statusTimeline && statusTimeline.length > 0) {
+    const statusIcons: Record<string, string> = {
+      confirmed: "\u2705",
+      preparing: "\u{1F468}\u200D\u{1F373}",
+      ready: "\u{1F4E6}",
+      delivering: "\u{1F6F5}",
+      delivered: "\u{1F389}",
+      cancelled: "\u274C",
+    };
+    msg += `\n\n\u{1F4CB} <b>STATUS</b>`;
+    for (const entry of statusTimeline) {
+      const icon = statusIcons[entry.status] || "\u{1F4CB}";
+      msg += `\n    ${icon} ${esc(entry.status.toUpperCase())}  <i>${esc(entry.time)}</i>`;
+    }
+  }
 
   return msg;
 }
 
-export function buildPaymentConfirmedMessage(
-  orderId: string,
-  total: number,
-  customerName: string
-): string {
-  return `✅ <b>PEMBAYARAN BERHASIL</b>
-━━━━━━━━━━━━━━━━━━━━
-
-<b>ID Pesanan</b>
-<code>${esc(orderId)}</code>
-
-Pelanggan: <b>${esc(customerName)}</b>
-Total: <b>${fmtRp(total)}</b>
-
-⚡ <b>Segera proses pesanan ini!</b>`;
+/** Legacy: build new order message (calls buildOrderMessage without timeline) */
+export function buildNewOrderMessage(data: OrderNotificationData): string {
+  return buildOrderMessage(data);
 }
 
+/** Legacy: build status change message (kept for fallback when no telegram_message_id) */
 export function buildStatusChangeMessage(
   orderId: string,
   newStatus: string,
   customerName: string
 ): string {
   const statusIcons: Record<string, string> = {
-    confirmed: "✅",
-    preparing: "👨‍🍳",
-    ready: "📦",
-    delivering: "🛵",
-    delivered: "🎉",
-    cancelled: "❌",
+    confirmed: "\u2705",
+    preparing: "\u{1F468}\u200D\u{1F373}",
+    ready: "\u{1F4E6}",
+    delivering: "\u{1F6F5}",
+    delivered: "\u{1F389}",
+    cancelled: "\u274C",
   };
-  const icon = statusIcons[newStatus] || "📋";
+  const icon = statusIcons[newStatus] || "\u{1F4CB}";
 
   return `${icon} <b>STATUS UPDATE</b>
-━━━━━━━━━━━━━━━━━━━━
+\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
 
 <b>ID Pesanan</b>
 <code>${esc(orderId)}</code>

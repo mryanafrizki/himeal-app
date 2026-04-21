@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getOrder, updateOrderPaymentStatus } from "@/lib/db";
+import { getOrder, updateOrderPaymentStatus, saveTelegramMessageId } from "@/lib/db";
 import { checkPaymentStatus } from "@/lib/atlantic";
 import {
   sendTelegramNotification,
-  buildNewOrderMessage,
-  buildPaymentConfirmedMessage,
+  buildOrderMessage,
 } from "@/lib/telegram";
 
 export async function GET(
@@ -70,7 +69,8 @@ export async function GET(
       try {
         const paidOrder = getOrder(id);
         if (paidOrder) {
-          const orderMsg = buildNewOrderMessage({
+          const now = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+          const orderMsg = buildOrderMessage({
             orderId: id,
             orderType: paidOrder.customer_address.startsWith("Pickup") || paidOrder.customer_address.startsWith("Takeaway") ? "takeaway" : "delivery",
             customerName: paidOrder.customer_name,
@@ -89,8 +89,11 @@ export async function GET(
             deliveryFee: paidOrder.delivery_fee,
             total: paidOrder.total,
             distanceKm: paidOrder.distance_km,
-          });
-          await sendTelegramNotification(orderMsg);
+          }, [{ status: "confirmed", time: now }]);
+          const msgId = await sendTelegramNotification(orderMsg);
+          if (msgId) {
+            saveTelegramMessageId(id, msgId);
+          }
         }
       } catch (teleErr) {
         console.error("[Payment Status] Telegram notification failed:", teleErr);

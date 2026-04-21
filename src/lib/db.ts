@@ -179,6 +179,14 @@ export function getDb(): Database.Database {
     try { db.exec("ALTER TABLE products ADD COLUMN hpp INTEGER NOT NULL DEFAULT 0"); } catch { /* already exists */ }
     try { db.exec("ALTER TABLE products ADD COLUMN promo_price INTEGER"); } catch { /* already exists */ }
     try { db.exec("ALTER TABLE products ADD COLUMN promo_end_date TEXT"); } catch { /* already exists */ }
+    // Status timestamps
+    try { db.exec("ALTER TABLE orders ADD COLUMN confirmed_at TEXT"); } catch { /* already exists */ }
+    try { db.exec("ALTER TABLE orders ADD COLUMN preparing_at TEXT"); } catch { /* already exists */ }
+    try { db.exec("ALTER TABLE orders ADD COLUMN ready_at TEXT"); } catch { /* already exists */ }
+    try { db.exec("ALTER TABLE orders ADD COLUMN delivering_at TEXT"); } catch { /* already exists */ }
+    try { db.exec("ALTER TABLE orders ADD COLUMN delivered_at TEXT"); } catch { /* already exists */ }
+    // Telegram message tracking
+    try { db.exec("ALTER TABLE orders ADD COLUMN telegram_message_id INTEGER"); } catch { /* already exists */ }
 
     seedDefaultProducts();
     seedDefaultStoreSettings();
@@ -212,6 +220,12 @@ export interface OrderRow {
   expires_at: string | null;
   paid_at: string | null;
   updated_at: string;
+  confirmed_at: string | null;
+  preparing_at: string | null;
+  ready_at: string | null;
+  delivering_at: string | null;
+  delivered_at: string | null;
+  telegram_message_id: number | null;
 }
 
 export interface OrderItemRow {
@@ -307,9 +321,28 @@ export function updateOrderPaymentStatus(
 
 export function updateOrderStatus(orderId: string, status: string): void {
   const db = getDb();
-  db.prepare(
-    `UPDATE orders SET order_status = ?, updated_at = datetime('now', 'localtime') WHERE id = ?`
-  ).run(status, orderId);
+  const timestampCol: Record<string, string> = {
+    confirmed: "confirmed_at",
+    preparing: "preparing_at",
+    ready: "ready_at",
+    delivering: "delivering_at",
+    delivered: "delivered_at",
+  };
+  const col = timestampCol[status];
+  if (col) {
+    db.prepare(
+      `UPDATE orders SET order_status = ?, ${col} = datetime('now', 'localtime'), updated_at = datetime('now', 'localtime') WHERE id = ?`
+    ).run(status, orderId);
+  } else {
+    db.prepare(
+      `UPDATE orders SET order_status = ?, updated_at = datetime('now', 'localtime') WHERE id = ?`
+    ).run(status, orderId);
+  }
+}
+
+export function saveTelegramMessageId(orderId: string, messageId: number): void {
+  const db = getDb();
+  db.prepare("UPDATE orders SET telegram_message_id = ? WHERE id = ?").run(messageId, orderId);
 }
 
 export function getActiveOrdersCount(): number {

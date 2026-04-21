@@ -225,6 +225,12 @@ export async function POST(request: NextRequest) {
         voucher_id: voucherId,
         voucher_discount: voucherDiscount,
         expires_at: null,
+        confirmed_at: null,
+        preparing_at: null,
+        ready_at: null,
+        delivering_at: null,
+        delivered_at: null,
+        telegram_message_id: null,
       },
       validatedItems.map((item) => ({
         order_id: orderId,
