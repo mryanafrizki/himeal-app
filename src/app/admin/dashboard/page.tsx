@@ -268,6 +268,15 @@ export default function AdminDashboardPage() {
   const [adminKey, setAdminKey] = useState("");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
+  // Pagination state per tab
+  const [paidPage, setPaidPage] = useState(1);
+  const [paidTotalPages, setPaidTotalPages] = useState(1);
+  const [pendingPage, setPendingPage] = useState(1);
+  const [pendingTotalPages, setPendingTotalPages] = useState(1);
+  const [cancelledPage, setCancelledPage] = useState(1);
+  const [cancelledTotalPages, setCancelledTotalPages] = useState(1);
+  const ORDERS_PER_PAGE = 20;
+
   useEffect(() => {
     const key = sessionStorage.getItem("himeal_admin_key");
     if (!key) {
@@ -292,38 +301,41 @@ export default function AdminDashboardPage() {
   const fetchPaidOrders = useCallback(async () => {
     if (!adminKey) return;
     try {
-      const res = await fetch("/api/admin/orders?payment_status=success", {
+      const res = await fetch(`/api/admin/orders?payment_status=success&page=${paidPage}&limit=${ORDERS_PER_PAGE}`, {
         headers: { "x-admin-key": adminKey },
       });
       if (res.status === 401) { router.push("/admin"); return; }
       const data = await res.json();
       setPaidOrders(Array.isArray(data) ? data : data.orders || []);
+      if (data.totalPages !== undefined) setPaidTotalPages(data.totalPages);
     } catch { /* ignore */ }
-  }, [adminKey, router]);
+  }, [adminKey, router, paidPage]);
 
   const fetchPendingOrders = useCallback(async () => {
     if (!adminKey) return;
     try {
-      const res = await fetch("/api/admin/orders?payment_status=pending", {
+      const res = await fetch(`/api/admin/orders?payment_status=pending&page=${pendingPage}&limit=${ORDERS_PER_PAGE}`, {
         headers: { "x-admin-key": adminKey },
       });
       if (res.status === 401) { router.push("/admin"); return; }
       const data = await res.json();
       setPendingOrders(Array.isArray(data) ? data : data.orders || []);
+      if (data.totalPages !== undefined) setPendingTotalPages(data.totalPages);
     } catch { /* ignore */ }
-  }, [adminKey, router]);
+  }, [adminKey, router, pendingPage]);
 
   const fetchCancelledOrders = useCallback(async () => {
     if (!adminKey) return;
     try {
-      const res = await fetch("/api/admin/orders?payment_status=cancelled", {
+      const res = await fetch(`/api/admin/orders?payment_status=cancelled&page=${cancelledPage}&limit=${ORDERS_PER_PAGE}`, {
         headers: { "x-admin-key": adminKey },
       });
       if (res.status === 401) { router.push("/admin"); return; }
       const data = await res.json();
       setCancelledOrders(Array.isArray(data) ? data : data.orders || []);
+      if (data.totalPages !== undefined) setCancelledTotalPages(data.totalPages);
     } catch { /* ignore */ }
-  }, [adminKey, router]);
+  }, [adminKey, router, cancelledPage]);
 
   const fetchAllOrders = useCallback(async () => {
     await Promise.all([fetchPaidOrders(), fetchPendingOrders(), fetchCancelledOrders()]);
@@ -380,6 +392,9 @@ export default function AdminDashboardPage() {
   };
 
   const orders = paymentSubTab === "success" ? paidOrders : paymentSubTab === "pending" ? pendingOrders : cancelledOrders;
+  const currentPage = paymentSubTab === "success" ? paidPage : paymentSubTab === "pending" ? pendingPage : cancelledPage;
+  const currentTotalPages = paymentSubTab === "success" ? paidTotalPages : paymentSubTab === "pending" ? pendingTotalPages : cancelledTotalPages;
+  const setCurrentPage = paymentSubTab === "success" ? setPaidPage : paymentSubTab === "pending" ? setPendingPage : setCancelledPage;
   const activeOrderCount = paidOrders.filter((o) =>
     ["confirmed", "preparing", "ready", "delivering"].includes(o.order_status)
   ).length;
@@ -570,7 +585,7 @@ export default function AdminDashboardPage() {
             <div className="flex items-center justify-between">
               <div className="flex gap-1 bg-surface-container-lowest rounded-xl p-1">
                 <button
-                  onClick={() => setPaymentSubTab("success")}
+                  onClick={() => { setPaymentSubTab("success"); setPaidPage(1); }}
                   className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
                     paymentSubTab === "success"
                       ? "bg-primary-container text-on-primary-container"
@@ -588,7 +603,7 @@ export default function AdminDashboardPage() {
                   </span>
                 </button>
                 <button
-                  onClick={() => setPaymentSubTab("pending")}
+                  onClick={() => { setPaymentSubTab("pending"); setPendingPage(1); }}
                   className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
                     paymentSubTab === "pending"
                       ? "bg-yellow-900/40 text-yellow-300"
@@ -606,7 +621,7 @@ export default function AdminDashboardPage() {
                    </span>
                 </button>
                 <button
-                  onClick={() => setPaymentSubTab("cancelled")}
+                  onClick={() => { setPaymentSubTab("cancelled"); setCancelledPage(1); }}
                   className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
                     paymentSubTab === "cancelled"
                       ? "bg-red-900/40 text-red-300"
@@ -785,6 +800,29 @@ export default function AdminDashboardPage() {
                       ? "Tidak ada pesanan menunggu pembayaran."
                       : "Tidak ada pesanan yang dibatalkan."}
                   </p>
+                </div>
+              )}
+
+              {/* Pagination Controls */}
+              {currentTotalPages > 1 && (
+                <div className="flex justify-between items-center pt-4">
+                  <p className="text-xs text-outline font-medium">Halaman {currentPage} dari {currentTotalPages}</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setCurrentPage((p: number) => Math.max(1, p - 1))}
+                      disabled={currentPage <= 1}
+                      className="w-8 h-8 rounded bg-surface-container-highest border border-outline-variant/20 flex items-center justify-center text-secondary disabled:opacity-30"
+                    >
+                      <span className="material-symbols-outlined text-sm">chevron_left</span>
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage((p: number) => Math.min(currentTotalPages, p + 1))}
+                      disabled={currentPage >= currentTotalPages}
+                      className="w-8 h-8 rounded bg-surface-container-highest border border-outline-variant/20 flex items-center justify-center text-secondary hover:bg-primary-container hover:text-on-primary transition-colors disabled:opacity-30"
+                    >
+                      <span className="material-symbols-outlined text-sm">chevron_right</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

@@ -1064,6 +1064,20 @@ export function getRecentReviews(limit: number = 10): (ReviewRow & { customer_na
   `).all(limit) as (ReviewRow & { customer_name: string })[];
 }
 
+export function getAllReviewsPaginated(page: number = 1, limit: number = 10): { reviews: (ReviewRow & { customer_name: string })[], total: number } {
+  const db = getDb();
+  const total = (db.prepare("SELECT COUNT(*) as count FROM reviews").get() as { count: number }).count;
+  const offset = (page - 1) * limit;
+  const reviews = db.prepare(`
+    SELECT r.*, o.customer_name
+    FROM reviews r
+    JOIN orders o ON o.id = r.order_id
+    ORDER BY r.created_at DESC
+    LIMIT ? OFFSET ?
+  `).all(limit, offset) as (ReviewRow & { customer_name: string })[];
+  return { reviews, total };
+}
+
 // ─── Feedback ────────────────────────────────────────────────────────
 
 export interface FeedbackRow {

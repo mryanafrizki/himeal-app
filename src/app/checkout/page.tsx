@@ -48,6 +48,9 @@ export default function CheckoutPage() {
   const [editAddress, setEditAddress] = useState("");
   const [editAddressNotes, setEditAddressNotes] = useState("");
 
+  // Available addons per product (fetched from API)
+  const [availableAddons, setAvailableAddons] = useState<Record<string, { id: string; name: string; price: number }[]>>({});
+
   // Task 6: Voucher state
   const [voucherCode, setVoucherCode] = useState("");
   const [voucherDiscount, setVoucherDiscount] = useState(0);
@@ -86,6 +89,24 @@ export default function CheckoutPage() {
       router.replace("/");
     }
   }, [router]);
+
+  // Fetch all available addons for each product in the cart
+  useEffect(() => {
+    if (!data) return;
+    const productIds = [...new Set(data.items.map((item) => item.productId))];
+    productIds.forEach((pid) => {
+      if (availableAddons[pid]) return; // already fetched
+      fetch(`/api/products/${pid}/addons`)
+        .then((res) => (res.ok ? res.json() : []))
+        .then((addons: { id: string; name: string; price: number; is_active: number }[]) => {
+          const active = addons
+            .filter((a) => a.is_active === 1)
+            .map((a) => ({ id: a.id, name: a.name, price: a.price }));
+          setAvailableAddons((prev) => ({ ...prev, [pid]: active }));
+        })
+        .catch(() => {});
+    });
+  }, [data, availableAddons]);
 
   // Task 1: Sync changes back to sessionStorage
   const syncStorage = useCallback((updated: CheckoutData) => {
@@ -146,6 +167,20 @@ export default function CheckoutPage() {
     } else {
       item.addons = item.addons.map((a) => a.id === addonId ? { ...a, qty } : a);
     }
+    items[index] = item;
+    const updated = recalcTotals(items, data);
+    setData(updated);
+    syncStorage(updated);
+  }, [data, recalcTotals, syncStorage]);
+
+  // Add a new addon to a cart item
+  const addAddonToItem = useCallback((index: number, addon: { id: string; name: string; price: number }) => {
+    if (!data) return;
+    const items = [...data.items];
+    const item = { ...items[index] };
+    // Only add if not already present
+    if (item.addons.some((a) => a.id === addon.id)) return;
+    item.addons = [...item.addons, { id: addon.id, name: addon.name, price: addon.price, qty: 1 }];
     items[index] = item;
     const updated = recalcTotals(items, data);
     setData(updated);
@@ -448,23 +483,43 @@ export default function CheckoutPage() {
                         {formatCurrency(((item.originalPrice && item.originalPrice > item.price ? item.originalPrice : item.price) + item.addons.reduce((s, a) => s + a.price * (a.qty || 1), 0)) * item.quantity)}
                       </span>
                     </div>
-                    {item.addons.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mt-1.5">
-                        {item.addons.map((a) => (
-                          <div key={a.id} className="inline-flex items-center gap-1 bg-surface-container-highest rounded-full pl-2.5 pr-1 py-0.5">
-                            <span className="text-[10px] text-on-surface-variant">{a.name}{a.qty && a.qty > 1 ? ` x${a.qty}` : ""}</span>
-                            <div className="flex items-center gap-0.5">
-                              <button type="button" onClick={() => updateItemAddonQty(i, a.id, (a.qty || 1) - 1)} className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-error-container/30 text-on-surface-variant active:scale-90 transition-transform">
-                                <span className="material-symbols-outlined" style={{ fontSize: "10px" }}>{(a.qty || 1) <= 1 ? "close" : "remove"}</span>
-                              </button>
-                              <button type="button" onClick={() => updateItemAddonQty(i, a.id, (a.qty || 1) + 1)} className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-primary-container/30 text-on-surface-variant active:scale-90 transition-transform">
-                                <span className="material-symbols-outlined" style={{ fontSize: "10px" }}>add</span>
-                              </button>
+                    {/* All available addons for this product */}
+                    {(() => {
+                      const productAddons = availableAddons[item.productId] || [];
+                      const cartAddonIds = new Set(item.addons.map((a) => a.id));
+                      const unselected = productAddons.filter((a) => !cartAddonIds.has(a.id));
+                      if (item.addons.length === 0 && unselected.length === 0) return null;
+                      return (
+                        <div className="flex flex-wrap gap-1.5 mt-1.5">
+                          {/* Selected addons with qty controls */}
+                          {item.addons.map((a) => (
+                            <div key={a.id} className="inline-flex items-center gap-1 bg-primary/10 border border-primary/20 rounded-full pl-2.5 pr-1 py-0.5">
+                              <span className="text-[10px] text-primary font-medium">{a.name} +{formatCurrency(a.price)}{a.qty > 1 ? ` x${a.qty}` : ""}</span>
+                              <div className="flex items-center gap-0.5">
+                                <button type="button" onClick={() => updateItemAddonQty(i, a.id, (a.qty || 1) - 1)} className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-error-container/30 text-primary active:scale-90 transition-transform">
+                                  <span className="material-symbols-outlined" style={{ fontSize: "10px" }}>{(a.qty || 1) <= 1 ? "close" : "remove"}</span>
+                                </button>
+                                <button type="button" onClick={() => updateItemAddonQty(i, a.id, (a.qty || 1) + 1)} className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-primary-container/30 text-primary active:scale-90 transition-transform">
+                                  <span className="material-symbols-outlined" style={{ fontSize: "10px" }}>add</span>
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                          ))}
+                          {/* Unselected addons with add button */}
+                          {unselected.map((a) => (
+                            <button
+                              key={a.id}
+                              type="button"
+                              onClick={() => addAddonToItem(i, a)}
+                              className="inline-flex items-center gap-1 border border-outline-variant/30 rounded-full pl-2.5 pr-1.5 py-0.5 hover:border-primary/40 hover:bg-primary/5 transition-colors active:scale-95"
+                            >
+                              <span className="text-[10px] text-on-surface-variant">{a.name} +{formatCurrency(a.price)}</span>
+                              <span className="material-symbols-outlined text-on-surface-variant" style={{ fontSize: "12px" }}>add</span>
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })()}
                     {/* Task 1: Qty +/- controls */}
                     <div className="mt-2 flex items-center gap-1">
                       <button
