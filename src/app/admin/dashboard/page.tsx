@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { formatCurrency, ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/constants";
 
@@ -63,7 +63,8 @@ function statusColor(status: string): string {
   }
 }
 
-function statusLabel(status: string): string {
+function statusLabel(status: string, isPickup?: boolean): string {
+  if (status === "ready") return isPickup ? "Siap Diambil" : "Siap Dikirim";
   const labels: Record<string, string> = {
     ...ORDER_STATUS_LABELS,
     ready: "Siap Dikirim",
@@ -71,8 +72,12 @@ function statusLabel(status: string): string {
   return labels[status] || status;
 }
 
-/** Action button config per status */
-function getActionButtons(status: string): { label: string; icon: string; nextStatus: string; variant: "primary" | "danger" }[] {
+function isPickupOrder(order: Order): boolean {
+  return order.customer_address.startsWith("Pickup") || order.customer_address.startsWith("Takeaway") || order.delivery_fee === 0;
+}
+
+/** Action button config per status — pickup-aware */
+function getActionButtons(status: string, pickup: boolean): { label: string; icon: string; nextStatus: string; variant: "primary" | "danger" }[] {
   switch (status) {
     case "confirmed":
       return [
@@ -81,14 +86,19 @@ function getActionButtons(status: string): { label: string; icon: string; nextSt
       ];
     case "preparing":
       return [
-        { label: "Siap Dikirim", icon: "package_2", nextStatus: "ready", variant: "primary" },
+        { label: pickup ? "Siap Diambil" : "Siap Dikirim", icon: pickup ? "shopping_bag" : "package_2", nextStatus: "ready", variant: "primary" },
         { label: "Cancel", icon: "close", nextStatus: "cancelled", variant: "danger" },
       ];
     case "ready":
-      return [
-        { label: "Kirim", icon: "delivery_dining", nextStatus: "delivering", variant: "primary" },
-        { label: "Cancel", icon: "close", nextStatus: "cancelled", variant: "danger" },
-      ];
+      return pickup
+        ? [
+            { label: "Selesai (Diambil)", icon: "task_alt", nextStatus: "delivered", variant: "primary" },
+            { label: "Cancel", icon: "close", nextStatus: "cancelled", variant: "danger" },
+          ]
+        : [
+            { label: "Kirim", icon: "delivery_dining", nextStatus: "delivering", variant: "primary" },
+            { label: "Cancel", icon: "close", nextStatus: "cancelled", variant: "danger" },
+          ];
     case "delivering":
       return [
         { label: "Selesai", icon: "task_alt", nextStatus: "delivered", variant: "primary" },
@@ -96,6 +106,114 @@ function getActionButtons(status: string): { label: string; icon: string; nextSt
     default:
       return [];
   }
+}
+
+/** Inline chat panel for admin order cards */
+function AdminChatPanel({ orderId, adminKey }: { orderId: string; adminKey: string }) {
+  const [messages, setMessages] = useState<{ id: number; sender: string; message: string; created_at: string }[]>([]);
+  const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [unread, setUnread] = useState(0);
+  const endRef = useRef<HTMLDivElement>(null);
+
+  const fetchMessages = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/order/${orderId}/chat?after=0`, { headers: { "x-admin-key": adminKey } });
+      if (!res.ok) return;
+      const data = await res.json();
+      const arr = Array.isArray(data) ? data : [];
+      setMessages(arr);
+      if (!open) {
+        setUnread(arr.filter((m: { sender: string }) => m.sender === "user").length);
+      }
+    } catch { /* ignore */ }
+  }, [orderId, adminKey, open]);
+
+  useEffect(() => {
+    fetchMessages();
+    const interval = setInterval(fetchMessages, 8000);
+    return () => clearInterval(interval);
+  }, [fetchMessages]);
+
+  useEffect(() => {
+    if (open) {
+      endRef.current?.scrollIntoView({ behavior: "smooth" });
+      setUnread(0);
+    }
+  }, [messages, open]);
+
+  const sendMessage = async () => {
+    if (!input.trim() || sending) return;
+    setSending(true);
+    try {
+      await fetch(`/api/order/${orderId}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-key": adminKey },
+        body: JSON.stringify({ message: input.trim(), sender: "admin" }),
+      });
+      setInput("");
+      await fetchMessages();
+    } catch { /* ignore */ }
+    finally { setSending(false); }
+  };
+
+  return (
+    <div className="border-t border-outline-variant/15 mt-2 pt-2">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 text-xs text-on-surface-variant hover:text-primary transition-colors w-full"
+      >
+        <span className="material-symbols-outlined text-sm">chat</span>
+        <span className="font-bold">Chat</span>
+        {unread > 0 && (
+          <span className="bg-primary text-on-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full">{unread}</span>
+        )}
+        <span className="material-symbols-outlined text-sm ml-auto">{open ? "expand_less" : "expand_more"}</span>
+      </button>
+      {open && (
+        <div className="mt-2 space-y-2">
+          <div className="max-h-48 overflow-y-auto space-y-1.5 px-1">
+            {messages.length === 0 && (
+              <p className="text-xs text-outline text-center py-3">Belum ada pesan</p>
+            )}
+            {messages.map((msg) => (
+              <div key={msg.id} className={`flex ${msg.sender === "admin" ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[75%] px-3 py-1.5 rounded-xl text-xs ${
+                  msg.sender === "admin"
+                    ? "bg-primary-container text-on-primary-container"
+                    : "bg-surface-container-highest text-on-surface"
+                }`}>
+                  <p>{msg.message}</p>
+                  <p className="text-[9px] opacity-60 mt-0.5">
+                    {new Date(msg.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
+                  </p>
+                </div>
+              </div>
+            ))}
+            <div ref={endRef} />
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+              placeholder="Ketik pesan..."
+              className="flex-1 px-3 py-2 bg-surface-container border-none rounded-lg text-xs text-on-surface focus:ring-1 focus:ring-primary"
+            />
+            <button
+              onClick={sendMessage}
+              disabled={sending || !input.trim()}
+              className="px-3 py-2 bg-primary-container text-on-primary-container rounded-lg text-xs font-bold disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-sm">send</span>
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function CountdownToExpiry({ expiresAt }: { expiresAt: string }) {
@@ -519,7 +637,8 @@ export default function AdminDashboardPage() {
                 const createdDate = new Date(order.created_at);
                 const timeStr = createdDate.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
                 const dateStr = createdDate.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
-                const actions = paymentSubTab === "success" ? getActionButtons(order.order_status) : [];
+                const pickup = isPickupOrder(order);
+                const actions = paymentSubTab === "success" ? getActionButtons(order.order_status, pickup) : [];
                 const isDelivered = order.order_status === "delivered";
                 const isCancelled = order.order_status === "cancelled";
 
@@ -532,8 +651,11 @@ export default function AdminDashboardPage() {
                           <h3 className="font-headline font-bold text-on-surface">
                             {order.customer_name || "Tanpa Nama"}
                           </h3>
+                          {pickup && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase bg-teal-900/40 text-teal-300">Pickup</span>
+                          )}
                           <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${statusColor(order.order_status)}`}>
-                            {statusLabel(order.order_status)}
+                            {statusLabel(order.order_status, pickup)}
                           </span>
                         </div>
                         <p className="text-xs text-on-surface-variant mt-0.5">
@@ -641,6 +763,11 @@ export default function AdminDashboardPage() {
                           );
                         })}
                       </div>
+                    )}
+
+                    {/* Chat Panel */}
+                    {paymentSubTab === "success" && !isCancelled && (
+                      <AdminChatPanel orderId={order.id} adminKey={adminKey} />
                     )}
                   </div>
                 );

@@ -29,6 +29,7 @@ interface OrderData {
     quantity: number;
     price: number;
     notes: string | null;
+    product_image?: string;
   }>;
 }
 
@@ -215,10 +216,11 @@ export default function OrderTrackingPage() {
     fetch(`/api/order/${orderId}/review`)
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
-        if (data && data.id) {
-          setExistingReview(data);
-          setRating(data.rating);
-          setReviewComment(data.comment || "");
+        const review = data?.review || data;
+        if (review && review.id) {
+          setExistingReview(review);
+          setRating(review.rating);
+          setReviewComment(review.comment || "");
         }
         setReviewLoaded(true);
       })
@@ -239,7 +241,7 @@ export default function OrderTrackingPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setExistingReview(data);
+        setExistingReview(data?.review || data);
         toast.success("Terima kasih atas ulasan Anda!");
       } else {
         const err = await res.json();
@@ -445,7 +447,11 @@ export default function OrderTrackingPage() {
               <div key={i} className="flex justify-between items-start">
                 <div className="flex gap-4">
                   <div className="w-16 h-16 rounded-xl bg-surface-container-high overflow-hidden shrink-0">
-                    <div className="w-full h-full bg-gradient-to-br from-primary-container/20 to-surface-container" />
+                    {item.product_image ? (
+                      <img src={item.product_image} alt={item.product_name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-primary-container/20 to-surface-container" />
+                    )}
                   </div>
                   <div>
                     <p className="font-headline font-bold text-on-surface">{item.product_name}</p>

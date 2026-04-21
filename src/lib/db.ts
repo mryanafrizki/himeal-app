@@ -260,8 +260,10 @@ export function getOrder(id: string): (OrderRow & { items: (OrderItemRow & { add
   if (!order) return null;
 
   const items = db
-    .prepare("SELECT * FROM order_items WHERE order_id = ?")
-    .all(id) as OrderItemRow[];
+    .prepare(
+      "SELECT oi.*, COALESCE(p.image, '') as product_image FROM order_items oi LEFT JOIN products p ON p.id = oi.product_id WHERE oi.order_id = ?"
+    )
+    .all(id) as (OrderItemRow & { product_image: string })[];
 
   const itemIds = items.map((i) => i.id);
   const allAddons = itemIds.length > 0 ? getOrderItemAddons(itemIds) : [];

@@ -19,7 +19,7 @@ export async function GET(
 
     const messages = getChatMessages(id, afterId ? parseInt(afterId, 10) : undefined);
 
-    return NextResponse.json({ messages });
+    return NextResponse.json(messages);
   } catch (error) {
     console.error("[GET /api/order/[id]/chat]", error);
     return NextResponse.json(

@@ -33,7 +33,7 @@ export default function AdminFeedbackPage() {
       if (res.status === 401) { router.push("/admin"); return; }
       if (res.ok) {
         const data = await res.json();
-        setFeedbacks(Array.isArray(data) ? data : data.feedbacks || []);
+        setFeedbacks(Array.isArray(data) ? data : data.feedback || []);
         setTotalPages(data.totalPages || 1);
       }
     } catch { /* ignore */ }

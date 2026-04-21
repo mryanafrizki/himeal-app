@@ -5,11 +5,19 @@ import { sendTelegramNotification, buildStatusChangeMessage } from "@/lib/telegr
 
 const VALID_STATUSES = ["confirmed", "preparing", "ready", "delivering", "delivered", "cancelled"];
 
-const VALID_TRANSITIONS: Record<string, string[]> = {
+const DELIVERY_TRANSITIONS: Record<string, string[]> = {
   confirmed: ["preparing", "cancelled"],
   preparing: ["ready", "cancelled"],
   ready: ["delivering", "cancelled"],
   delivering: ["delivered"],
+  delivered: [],
+  cancelled: [],
+};
+
+const PICKUP_TRANSITIONS: Record<string, string[]> = {
+  confirmed: ["preparing", "cancelled"],
+  preparing: ["ready", "cancelled"],
+  ready: ["delivered", "cancelled"],
   delivered: [],
   cancelled: [],
 };
@@ -36,9 +44,11 @@ export async function PATCH(
       );
     }
 
-    // Validate status transition
+    // Validate status transition — pickup-aware
     const currentStatus = order.order_status;
-    const allowedNext = VALID_TRANSITIONS[currentStatus];
+    const isPickup = order.customer_address.startsWith("Pickup") || order.customer_address.startsWith("Takeaway") || order.delivery_fee === 0;
+    const transitions = isPickup ? PICKUP_TRANSITIONS : DELIVERY_TRANSITIONS;
+    const allowedNext = transitions[currentStatus];
     if (!allowedNext || !allowedNext.includes(body.status)) {
       return NextResponse.json(
         { error: `Tidak bisa mengubah status dari '${currentStatus}' ke '${body.status}'` },
