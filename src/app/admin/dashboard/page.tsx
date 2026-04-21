@@ -44,6 +44,7 @@ interface Order {
   payment_status: string;
   order_status: string;
   created_at: string;
+  updated_at: string;
   expires_at: string | null;
   items: OrderItem[];
 }
@@ -678,7 +679,10 @@ export default function AdminDashboardPage() {
                           </span>
                         </div>
                         <p className="text-xs text-on-surface-variant mt-0.5">
-                          #{order.id} &middot; {dateStr} {timeStr}
+                          <span className="font-mono text-outline">#{order.id.slice(0, 6)}</span> &middot; {dateStr} {timeStr}
+                          {isCancelled && order.updated_at && (
+                            <span className="text-error ml-1">&middot; Dibatalkan {new Date(order.updated_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</span>
+                          )}
                         </p>
                       </div>
                       <div className="text-right shrink-0">
@@ -686,8 +690,8 @@ export default function AdminDashboardPage() {
                           {formatCurrency(order.total)}
                         </p>
                         {/* Countdown for pending payment */}
-                        {order.payment_status === "pending" && order.expires_at && (
-                          <CountdownToExpiry expiresAt={order.expires_at} />
+                    {order.payment_status === "pending" && order.order_status !== "cancelled" && order.expires_at && (
+                      <CountdownToExpiry expiresAt={order.expires_at} />
                         )}
                       </div>
                     </div>

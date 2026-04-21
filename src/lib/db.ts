@@ -541,8 +541,18 @@ export function getOrdersPaginated(options: {
     params.push(options.status);
   }
   if (options.paymentStatus && options.paymentStatus !== "all") {
-    conditions.push("payment_status = ?");
-    params.push(options.paymentStatus);
+    if (options.paymentStatus === "pending") {
+      // Pending = payment pending AND not cancelled/expired
+      conditions.push("payment_status = 'pending'");
+      conditions.push("order_status != 'cancelled'");
+      conditions.push("payment_id IS NOT NULL");
+    } else if (options.paymentStatus === "cancelled") {
+      // Cancelled = order cancelled OR payment expired
+      conditions.push("(order_status = 'cancelled' OR payment_status = 'expired')");
+    } else {
+      conditions.push("payment_status = ?");
+      params.push(options.paymentStatus);
+    }
   }
   if (options.from) {
     conditions.push("created_at >= ?");

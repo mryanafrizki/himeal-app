@@ -152,11 +152,37 @@ export default function HomePage() {
 
   // Fetch products
   useEffect(() => {
-    fetch("/api/products")
+     fetch("/api/products")
       .then((res) => res.json())
       .then((data: MenuItem[]) => {
         setMenuItems(data);
         menuItemsRef.current = data;
+        // Sync cart prices with latest product data
+        setCart((prev) => {
+          type ProductData = MenuItem & { effective_price?: number; is_out_of_stock?: number };
+          const products = data as unknown as ProductData[];
+          const productMap = new Map(products.map((p) => [p.id, p]));
+          let changed = false;
+          const updated: Record<string, CartItem> = {};
+          for (const [id, item] of Object.entries(prev)) {
+            const product = productMap.get(id);
+            if (!product || product.is_out_of_stock) {
+              changed = true;
+              continue;
+            }
+            const currentPrice = product.effective_price ?? product.price;
+            if (item.price !== currentPrice) {
+              changed = true;
+              updated[id] = { ...item, price: currentPrice, name: product.name, image: product.image };
+            } else {
+              updated[id] = item;
+            }
+          }
+          if (changed && Object.keys(prev).length > 0) {
+            toast.info("Keranjang diperbarui sesuai harga terbaru");
+          }
+          return changed ? updated : prev;
+        });
       })
       .catch(() => toast.error("Gagal memuat menu"))
       .finally(() => setMenuLoading(false));
