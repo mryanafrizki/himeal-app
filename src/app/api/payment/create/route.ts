@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getOrder, updateOrderPayment, getStoreSettings, updateOrderQrisInfo, validateVoucher, applyVoucher } from "@/lib/db";
+import { getOrder, updateOrderPayment, getStoreSettings, updateOrderQrisInfo, validateVoucher, atomicApplyVoucher, rollbackVoucher, getDb } from "@/lib/db";
 import { createQRIS } from "@/lib/atlantic";
 import { PAYMENT_EXPIRY_MINUTES } from "@/lib/constants";
 
@@ -35,19 +35,49 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Apply voucher if provided and not already applied
+    // Consume voucher quota atomically at payment time (not order creation)
     let orderTotal = order.total;
+    let voucherConsumed = false;
+    let consumedVoucherId: string | null = null;
+
+    // Case 1: Order already has voucher_id (set at order creation, but quota not consumed yet)
+    if (order.voucher_id) {
+      const result = atomicApplyVoucher(order.voucher_id);
+      if (!result.success) {
+        // Voucher quota ran out — clear voucher from order, recalculate total
+        const db = getDb();
+        const newTotal = order.subtotal + order.delivery_fee;
+        db.prepare(
+          "UPDATE orders SET voucher_id = NULL, voucher_discount = 0, voucher_code = NULL, total = ? WHERE id = ?"
+        ).run(newTotal, body.orderId);
+        return NextResponse.json(
+          { error: "Kuota voucher sudah habis. Total diperbarui tanpa diskon.", voucherExpired: true, newTotal },
+          { status: 409 }
+        );
+      }
+      voucherConsumed = true;
+      consumedVoucherId = order.voucher_id;
+    }
+
+    // Case 2: Late voucher application (voucherCode provided but order has no voucher_id)
     if (body.voucherCode && !order.voucher_id) {
       const voucherResult = validateVoucher(body.voucherCode, order.subtotal);
       if (voucherResult.valid && voucherResult.discount && voucherResult.discount > 0) {
+        const applyResult = atomicApplyVoucher(voucherResult.voucher!.id);
+        if (!applyResult.success) {
+          return NextResponse.json(
+            { error: applyResult.error || "Kuota voucher sudah habis" },
+            { status: 409 }
+          );
+        }
+        voucherConsumed = true;
+        consumedVoucherId = voucherResult.voucher!.id;
         const discount = voucherResult.discount;
         orderTotal = Math.max(0, order.subtotal - discount + order.delivery_fee);
-        // Update order in DB with voucher info
-        const db = (await import("@/lib/db")).getDb();
+        const db = getDb();
         db.prepare(
-          "UPDATE orders SET voucher_id = ?, voucher_discount = ?, total = ? WHERE id = ?"
-        ).run(voucherResult.voucher!.id, discount, orderTotal, body.orderId);
-        applyVoucher(voucherResult.voucher!.id);
+          "UPDATE orders SET voucher_id = ?, voucher_discount = ?, voucher_code = ?, total = ? WHERE id = ?"
+        ).run(voucherResult.voucher!.id, discount, body.voucherCode.toUpperCase(), orderTotal, body.orderId);
       }
     }
 
@@ -63,6 +93,10 @@ export async function POST(request: NextRequest) {
     const result = await createQRIS(body.orderId, nominal);
 
     if (!result.status || !result.data) {
+      // Rollback voucher consumption if QRIS creation failed
+      if (voucherConsumed && consumedVoucherId) {
+        rollbackVoucher(consumedVoucherId);
+      }
       return NextResponse.json(
         { error: result.message || "Failed to create payment" },
         { status: 502 }

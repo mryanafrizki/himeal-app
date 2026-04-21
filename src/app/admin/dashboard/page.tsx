@@ -21,6 +21,7 @@ interface OrderItem {
   product_id: string;
   product_name: string;
   price: number;
+  original_price: number;
   quantity: number;
   notes: string | null;
 }
@@ -37,6 +38,9 @@ interface Order {
   delivery_fee: number;
   subtotal: number;
   total: number;
+  voucher_id: string | null;
+  voucher_discount: number;
+  voucher_code: string | null;
   payment_status: string;
   order_status: string;
   created_at: string;
@@ -682,7 +686,7 @@ export default function AdminDashboardPage() {
                           {formatCurrency(order.total)}
                         </p>
                         {/* Countdown for pending payment */}
-                        {paymentSubTab === "pending" && order.expires_at && (
+                        {order.payment_status === "pending" && order.expires_at && (
                           <CountdownToExpiry expiresAt={order.expires_at} />
                         )}
                       </div>
@@ -696,13 +700,33 @@ export default function AdminDashboardPage() {
                             {item.quantity}x {item.product_name}
                             {item.notes && <span className="text-outline ml-1">({item.notes})</span>}
                           </span>
-                          <span className="text-on-surface-variant">{formatCurrency(item.price * item.quantity)}</span>
+                          <div className="text-right">
+                            {item.original_price > 0 && item.original_price > item.price ? (
+                              <>
+                                <span className="text-xs text-on-surface-variant line-through">{formatCurrency(item.original_price * item.quantity)}</span>
+                                <span className="text-on-surface-variant ml-1">{formatCurrency(item.price * item.quantity)}</span>
+                              </>
+                            ) : (
+                              <span className="text-on-surface-variant">{formatCurrency(item.price * item.quantity)}</span>
+                            )}
+                          </div>
                         </div>
                       ))}
                       {order.delivery_fee > 0 && (
                         <div className="flex justify-between text-sm">
                           <span className="text-on-surface-variant">Ongkir ({order.distance_km} km)</span>
                           <span className="text-on-surface-variant">{formatCurrency(order.delivery_fee)}</span>
+                        </div>
+                      )}
+                      {order.voucher_discount > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-primary">
+                            Diskon Voucher
+                            {order.voucher_code && (
+                              <span className="ml-1 text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">{order.voucher_code}</span>
+                            )}
+                          </span>
+                          <span className="text-primary">-{formatCurrency(order.voucher_discount)}</span>
                         </div>
                       )}
                     </div>

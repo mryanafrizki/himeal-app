@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import { calculateRoadDistance, calculateDeliveryFee, validateDeliveryDistance } from "@/lib/delivery";
-import { createOrder, getActiveProducts, validateVoucher, applyVoucher, getAddonsByIds, createOrderItemAddons, getEffectivePrice } from "@/lib/db";
+import { createOrder, getActiveProducts, validateVoucher, getAddonsByIds, createOrderItemAddons, getEffectivePrice } from "@/lib/db";
 
 interface AddonInput {
   addonId: string;
@@ -64,6 +64,7 @@ export async function POST(request: NextRequest) {
       productId: string;
       productName: string;
       price: number;
+      originalPrice: number;
       quantity: number;
       notes: string | null;
       validatedAddons: Array<{ addonId: string; addonName: string; addonPrice: number; quantity: number }>;
@@ -139,11 +140,13 @@ export async function POST(request: NextRequest) {
       }
 
       const effectivePrice = getEffectivePrice(menuItem);
+      const originalPrice = menuItem.price;
 
       validatedItems.push({
         productId: menuItem.id,
         productName: menuItem.name,
         price: effectivePrice,
+        originalPrice,
         quantity: item.quantity,
         notes: item.notes || null,
         validatedAddons,
@@ -183,6 +186,7 @@ export async function POST(request: NextRequest) {
 
     // Voucher handling
     let voucherId: string | null = null;
+    let voucherCode: string | null = null;
     let voucherDiscount = 0;
 
     if (body.voucherCode && typeof body.voucherCode === "string") {
@@ -194,6 +198,7 @@ export async function POST(request: NextRequest) {
         );
       }
       voucherId = voucherResult.voucher!.id;
+      voucherCode = voucherResult.voucher!.code;
       voucherDiscount = voucherResult.discount!;
     }
 
@@ -223,6 +228,7 @@ export async function POST(request: NextRequest) {
         unique_code: 0,
         qris_fee: 0,
         voucher_id: voucherId,
+        voucher_code: voucherCode,
         voucher_discount: voucherDiscount,
         expires_at: null,
         confirmed_at: null,
@@ -237,6 +243,7 @@ export async function POST(request: NextRequest) {
         product_id: item.productId,
         product_name: item.productName,
         price: item.price,
+        original_price: item.originalPrice,
         quantity: item.quantity,
         notes: item.notes,
       }))
@@ -261,11 +268,6 @@ export async function POST(request: NextRequest) {
           }
         }
       }
-    }
-
-    // Apply voucher (increment used_count) after order is created
-    if (voucherId) {
-      applyVoucher(voucherId);
     }
 
     return NextResponse.json({

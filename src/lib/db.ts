@@ -187,6 +187,10 @@ export function getDb(): Database.Database {
     try { db.exec("ALTER TABLE orders ADD COLUMN delivered_at TEXT"); } catch { /* already exists */ }
     // Telegram message tracking
     try { db.exec("ALTER TABLE orders ADD COLUMN telegram_message_id INTEGER"); } catch { /* already exists */ }
+    // Original price for order items (for strikethrough display)
+    try { db.exec("ALTER TABLE order_items ADD COLUMN original_price INTEGER NOT NULL DEFAULT 0"); } catch { /* already exists */ }
+    // Voucher code snapshot on orders (denormalized for display)
+    try { db.exec("ALTER TABLE orders ADD COLUMN voucher_code TEXT"); } catch { /* already exists */ }
 
     seedDefaultProducts();
     seedDefaultStoreSettings();
@@ -226,6 +230,7 @@ export interface OrderRow {
   delivering_at: string | null;
   delivered_at: string | null;
   telegram_message_id: number | null;
+  voucher_code: string | null;
 }
 
 export interface OrderItemRow {
@@ -234,6 +239,7 @@ export interface OrderItemRow {
   product_id: string;
   product_name: string;
   price: number;
+  original_price: number;
   quantity: number;
   notes: string | null;
 }
@@ -245,13 +251,13 @@ export function createOrder(
   const db = getDb();
 
   const insertOrder = db.prepare(`
-    INSERT INTO orders (id, customer_name, customer_phone, customer_address, customer_lat, customer_lng, address_notes, distance_km, delivery_fee, subtotal, total, payment_id, payment_status, order_status, qr_string, notes, unique_code, qris_fee, voucher_id, voucher_discount, expires_at)
-    VALUES (@id, @customer_name, @customer_phone, @customer_address, @customer_lat, @customer_lng, @address_notes, @distance_km, @delivery_fee, @subtotal, @total, @payment_id, @payment_status, @order_status, @qr_string, @notes, @unique_code, @qris_fee, @voucher_id, @voucher_discount, @expires_at)
+    INSERT INTO orders (id, customer_name, customer_phone, customer_address, customer_lat, customer_lng, address_notes, distance_km, delivery_fee, subtotal, total, payment_id, payment_status, order_status, qr_string, notes, unique_code, qris_fee, voucher_id, voucher_discount, voucher_code, expires_at)
+    VALUES (@id, @customer_name, @customer_phone, @customer_address, @customer_lat, @customer_lng, @address_notes, @distance_km, @delivery_fee, @subtotal, @total, @payment_id, @payment_status, @order_status, @qr_string, @notes, @unique_code, @qris_fee, @voucher_id, @voucher_discount, @voucher_code, @expires_at)
   `);
 
   const insertItem = db.prepare(`
-    INSERT INTO order_items (order_id, product_id, product_name, price, quantity, notes)
-    VALUES (@order_id, @product_id, @product_name, @price, @quantity, @notes)
+    INSERT INTO order_items (order_id, product_id, product_name, price, original_price, quantity, notes)
+    VALUES (@order_id, @product_id, @product_name, @price, @original_price, @quantity, @notes)
   `);
 
   const transaction = db.transaction(() => {
@@ -981,6 +987,34 @@ export function validateVoucher(
 export function applyVoucher(voucherId: string): void {
   const db = getDb();
   db.prepare("UPDATE vouchers SET used_count = used_count + 1 WHERE id = ?").run(voucherId);
+}
+
+/** Atomically consume a voucher quota. Returns success/error. SQLite transactions are serialized (single-writer) so this is race-condition safe. */
+export function atomicApplyVoucher(
+  voucherId: string
+): { success: boolean; error?: string } {
+  const db = getDb();
+  const txn = db.transaction(() => {
+    const voucher = db.prepare("SELECT * FROM vouchers WHERE id = ?").get(voucherId) as VoucherRow | undefined;
+    if (!voucher) return { success: false, error: "Voucher tidak ditemukan" };
+    if (voucher.used_count >= voucher.quota) {
+      return { success: false, error: "Kuota voucher sudah habis" };
+    }
+    const result = db.prepare(
+      "UPDATE vouchers SET used_count = used_count + 1 WHERE id = ? AND used_count < quota"
+    ).run(voucherId);
+    if (result.changes === 0) {
+      return { success: false, error: "Kuota voucher sudah habis" };
+    }
+    return { success: true };
+  });
+  return txn();
+}
+
+/** Rollback a voucher consumption (e.g., if QRIS creation fails after voucher was consumed). */
+export function rollbackVoucher(voucherId: string): void {
+  const db = getDb();
+  db.prepare("UPDATE vouchers SET used_count = MAX(0, used_count - 1) WHERE id = ?").run(voucherId);
 }
 
 // ─── Chat Messages ───────────────────────────────────────────────────

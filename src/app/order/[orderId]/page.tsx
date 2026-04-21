@@ -34,6 +34,7 @@ interface OrderData {
     product_name: string;
     quantity: number;
     price: number;
+    original_price?: number;
     notes: string | null;
     product_image?: string;
     addons?: Array<{
@@ -470,11 +471,16 @@ export default function OrderTrackingPage() {
                 <div key={i} className="space-y-1.5">
                   <div className="flex justify-between items-start">
                     <div className="flex gap-4">
-                      <div className="w-16 h-16 rounded-xl bg-surface-container-high overflow-hidden shrink-0">
+                      <div className="relative w-16 h-16 rounded-xl bg-surface-container-high overflow-hidden shrink-0">
                         {item.product_image ? (
                           <img src={item.product_image} alt={item.product_name} className="w-full h-full object-cover" />
                         ) : (
                           <div className="w-full h-full bg-gradient-to-br from-primary-container/20 to-surface-container" />
+                        )}
+                        {item.original_price && item.original_price > 0 && item.original_price > item.price && (
+                          <div className="absolute top-1 right-1 bg-[#FF2D55] text-white text-[8px] font-black px-1.5 py-0.5 rounded-full">
+                            -{Math.round((1 - item.price / item.original_price) * 100)}%
+                          </div>
                         )}
                       </div>
                       <div>
@@ -485,13 +491,22 @@ export default function OrderTrackingPage() {
                         )}
                       </div>
                     </div>
-                    <span className="font-headline font-bold text-on-surface">{formatCurrency((item.price + addonTotal) * item.quantity)}</span>
+                    <div className="text-right shrink-0">
+                      {item.original_price && item.original_price > 0 && item.original_price > item.price ? (
+                        <>
+                          <span className="text-sm text-on-surface-variant line-through block">{formatCurrency((item.original_price + addonTotal) * item.quantity)}</span>
+                          <span className="font-headline font-bold text-on-surface">{formatCurrency((item.price + addonTotal) * item.quantity)}</span>
+                        </>
+                      ) : (
+                        <span className="font-headline font-bold text-on-surface">{formatCurrency((item.price + addonTotal) * item.quantity)}</span>
+                      )}
+                    </div>
                   </div>
                   {addons.length > 0 && (
                     <div className="ml-20 flex flex-wrap gap-1.5">
                       {addons.map((a, ai) => (
-                        <span key={ai} className="text-[11px] bg-primary/10 border border-primary/20 text-primary font-medium rounded-full px-2.5 py-0.5">
-                          {a.addon_name} {a.quantity > 1 && <span className="font-bold">x{a.quantity}</span>} +{formatCurrency(a.addon_price * a.quantity)}
+                         <span key={ai} className="text-[11px] bg-primary/10 border border-primary/20 text-primary font-medium rounded-full px-2.5 py-0.5">
+                          {a.addon_name} <span className="font-bold">x{a.quantity}</span> +{formatCurrency(a.addon_price * a.quantity)}
                         </span>
                       ))}
                     </div>
@@ -506,6 +521,21 @@ export default function OrderTrackingPage() {
               <span>Subtotal</span>
               <span>{formatCurrency(order.subtotal)}</span>
             </div>
+            {(() => {
+              const origTotal = (order.items || []).reduce((sum, item) => {
+                const orig = (item.original_price && item.original_price > 0 && item.original_price > item.price) ? item.original_price : item.price;
+                const adonTotal = (item.addons || []).reduce((s, a) => s + a.addon_price * a.quantity, 0);
+                return sum + (orig + adonTotal) * item.quantity;
+              }, 0);
+              const promoDiscount = origTotal - order.subtotal;
+              if (promoDiscount <= 0) return null;
+              return (
+                <div className="flex justify-between text-[#FF2D55]">
+                  <span>Diskon Promo</span>
+                  <span>-{formatCurrency(promoDiscount)}</span>
+                </div>
+              );
+            })()}
             {order.delivery_fee > 0 && (
               <div className="flex justify-between text-on-surface-variant">
                 <span>Ongkir ({order.distance_km} km)</span>

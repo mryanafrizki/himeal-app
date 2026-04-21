@@ -59,6 +59,9 @@ export default function CheckoutPage() {
   const [voucherLoading, setVoucherLoading] = useState(false);
   const [voucherShake, setVoucherShake] = useState(false);
 
+  // Price validation on load
+  const [priceValidated, setPriceValidated] = useState(false);
+
   // Task 10: Confirmation modal
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
@@ -186,6 +189,52 @@ export default function CheckoutPage() {
     setData(updated);
     syncStorage(updated);
   }, [data, recalcTotals, syncStorage]);
+
+  // Validate cart item prices against server on load
+  useEffect(() => {
+    if (!data || priceValidated) return;
+    const validatePrices = async () => {
+      try {
+        const res = await fetch("/api/products/validate-prices", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            items: data.items.map((i) => ({ productId: i.productId, price: i.price })),
+          }),
+        });
+        if (!res.ok) return;
+        const result = await res.json();
+        const serverItems: { productId: string; currentPrice: number; originalPrice: number; stale: boolean; removed: boolean }[] = result.items || [];
+        const serverMap = new Map(serverItems.map((si) => [si.productId, si]));
+        let hasChanges = false;
+        let updatedItems = data.items.filter((item) => {
+          const sv = serverMap.get(item.productId);
+          if (sv?.removed) { hasChanges = true; return false; }
+          return true;
+        });
+        updatedItems = updatedItems.map((item) => {
+          const sv = serverMap.get(item.productId);
+          if (sv?.stale) { hasChanges = true; return { ...item, price: sv.currentPrice, originalPrice: sv.originalPrice }; }
+          return item;
+        });
+        if (hasChanges) {
+          if (updatedItems.length === 0) {
+            sessionStorage.removeItem("himeal_checkout");
+            sessionStorage.setItem("himeal_cart", "{}");
+            toast.info("Semua produk dalam keranjang sudah tidak tersedia");
+            router.replace("/");
+            return;
+          }
+          const updated = recalcTotals(updatedItems, data);
+          setData(updated);
+          syncStorage(updated);
+          toast.info("Harga beberapa produk telah diperbarui");
+        }
+      } catch { /* allow checkout to proceed */ }
+      finally { setPriceValidated(true); }
+    };
+    validatePrices();
+  }, [data, priceValidated, recalcTotals, syncStorage, router]);
 
   // Task 4b: Update item notes
   const updateItemNotes = useCallback((index: number, notes: string) => {
@@ -674,11 +723,11 @@ export default function CheckoutPage() {
           <div className="max-w-3xl mx-auto">
             <button
               onClick={handlePayClick}
-              disabled={isProcessing}
+              disabled={isProcessing || !priceValidated}
               className="w-full bg-gradient-to-br from-primary to-primary-container text-on-primary font-headline font-extrabold text-lg py-5 rounded-full shadow-[0_20px_40px_rgba(91,219,111,0.2)] hover:scale-[1.02] active:scale-95 transition-all duration-300 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed animate-pulse-glow"
             >
               <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>lock</span>
-              {isProcessing ? "Memproses..." : "Bayar Sekarang"}
+              {isProcessing ? "Memproses..." : !priceValidated ? "Memvalidasi harga..." : "Bayar Sekarang"}
             </button>
           </div>
         </section>
