@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 
 interface ImageViewerProps {
   src: string;
@@ -9,7 +10,6 @@ interface ImageViewerProps {
 }
 
 export default function ImageViewer({ src, alt, onClose }: ImageViewerProps) {
-  // Lock body scroll when open
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -18,7 +18,6 @@ export default function ImageViewer({ src, alt, onClose }: ImageViewerProps) {
     };
   }, []);
 
-  // Close on Escape key
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -31,10 +30,13 @@ export default function ImageViewer({ src, alt, onClose }: ImageViewerProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center animate-viewer-backdrop"
-      onClick={onClose}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClose();
+      }}
       role="dialog"
       aria-modal="true"
       aria-label={alt}
@@ -45,7 +47,10 @@ export default function ImageViewer({ src, alt, onClose }: ImageViewerProps) {
       {/* Close button */}
       <button
         type="button"
-        onClick={onClose}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+        }}
         className="absolute top-5 right-5 z-10 w-11 h-11 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 active:scale-90 transition-all"
         aria-label="Tutup"
       >
@@ -60,6 +65,7 @@ export default function ImageViewer({ src, alt, onClose }: ImageViewerProps) {
         onClick={(e) => e.stopPropagation()}
         draggable={false}
       />
-    </div>
+    </div>,
+    document.body,
   );
 }

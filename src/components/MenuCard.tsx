@@ -158,7 +158,7 @@ export default function MenuCard({
         )}
       </div>
 
-      {/* Fullscreen image viewer */}
+      {/* Fullscreen image viewer — rendered via portal to escape card stacking context */}
       {viewerOpen && (
         <ImageViewer
           src={item.image}
