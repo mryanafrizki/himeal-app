@@ -65,6 +65,7 @@ export async function POST(request: NextRequest) {
       productName: string;
       price: number;
       originalPrice: number;
+      hpp: number;
       quantity: number;
       notes: string | null;
       validatedAddons: Array<{ addonId: string; addonName: string; addonPrice: number; quantity: number }>;
@@ -141,12 +142,14 @@ export async function POST(request: NextRequest) {
 
       const effectivePrice = getEffectivePrice(menuItem);
       const originalPrice = menuItem.price;
+      const productHpp = menuItem.hpp || 0;
 
       validatedItems.push({
         productId: menuItem.id,
         productName: menuItem.name,
         price: effectivePrice,
         originalPrice,
+        hpp: productHpp,
         quantity: item.quantity,
         notes: item.notes || null,
         validatedAddons,
@@ -244,6 +247,7 @@ export async function POST(request: NextRequest) {
         product_name: item.productName,
         price: item.price,
         original_price: item.originalPrice,
+        hpp: item.hpp,
         quantity: item.quantity,
         notes: item.notes,
       }))

@@ -13,6 +13,7 @@ interface Product {
   image: string;
   is_active: number;
   sort_order: number;
+  hpp: number;
   promo_price: number | null;
   promo_end_date: string | null;
 }
@@ -30,6 +31,9 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+
+  // HPP state
+  const [productHpp, setProductHpp] = useState(0);
 
   // Promo state
   const [promoActive, setPromoActive] = useState(false);
@@ -61,6 +65,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         setPrice(String(product.price));
         setDescription(product.description);
         setImage(product.image);
+        setProductHpp(product.hpp || 0);
         if (product.promo_price && product.promo_end_date) {
           setPromoActive(true);
           setPromoPrice(String(product.promo_price));
@@ -295,6 +300,43 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
               </div>
             </div>
           )}
+
+          {/* HPP Section */}
+          <div className="space-y-3 pt-4 border-t border-outline-variant/20">
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-primary">receipt_long</span>
+              <h3 className="font-headline font-bold text-on-surface">HPP (Harga Pokok)</h3>
+            </div>
+            <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/15">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs text-on-surface-variant">HPP per porsi</span>
+                <span className="text-lg font-headline font-black text-on-surface">
+                  {productHpp > 0 ? formatCurrency(productHpp) : "Belum diatur"}
+                </span>
+              </div>
+              {productHpp > 0 && priceNum > 0 && (
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="flex-1 h-2 rounded-full overflow-hidden bg-surface-container-highest/30">
+                    <div
+                      className="h-full bg-error/50 rounded-full transition-all"
+                      style={{ width: `${Math.min((productHpp / priceNum) * 100, 100)}%` }}
+                    />
+                  </div>
+                  <span className="text-xs font-bold text-on-surface-variant">
+                    {Math.round((productHpp / priceNum) * 100)}%
+                  </span>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => router.push(`/admin/products/${id}/hpp`)}
+                className="w-full py-2.5 rounded-xl border border-primary/30 text-primary text-xs font-bold uppercase tracking-widest hover:bg-primary/5 transition-colors flex items-center justify-center gap-1.5"
+              >
+                <span className="material-symbols-outlined text-base">calculate</span>
+                Kelola Bahan &amp; HPP
+              </button>
+            </div>
+          </div>
 
           {/* Promo Section */}
           <div className="space-y-4 pt-4 border-t border-outline-variant/20">

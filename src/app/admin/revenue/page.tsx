@@ -90,16 +90,21 @@ export default function AdminRevenuePage() {
       if (res.ok) {
         const data = await res.json();
         const orderList = Array.isArray(data) ? data : data.orders || [];
-        setOrders(orderList.map((o: Record<string, unknown>) => ({
-          id: o.id as string,
-          customer_name: (o.customer_name as string) || "Tanpa Nama",
-          total: o.total as number,
-          hpp: Math.round((o.total as number) * 0.4),
-          profit: Math.round((o.total as number) * 0.6),
-          order_status: o.order_status as string,
-          created_at: o.created_at as string,
-          items_summary: Array.isArray(o.items) ? (o.items as Array<{ quantity: number; product_name: string }>).map((i) => `${i.quantity}x ${i.product_name}`).join(", ") : "",
-        })));
+        setOrders(orderList.map((o: Record<string, unknown>) => {
+          const items = Array.isArray(o.items) ? o.items as Array<{ quantity: number; product_name: string; hpp?: number }> : [];
+          const orderHpp = items.reduce((sum, item) => sum + ((item.hpp || 0) * (item.quantity || 1)), 0);
+          const total = o.total as number;
+          return {
+            id: o.id as string,
+            customer_name: (o.customer_name as string) || "Tanpa Nama",
+            total,
+            hpp: orderHpp > 0 ? orderHpp : Math.round(total * 0.4),
+            profit: orderHpp > 0 ? total - orderHpp : Math.round(total * 0.6),
+            order_status: o.order_status as string,
+            created_at: o.created_at as string,
+            items_summary: items.map((i) => `${i.quantity}x ${i.product_name}`).join(", "),
+          };
+        }));
         setTotalPages(data.totalPages || 1);
       }
     } catch { /* ignore */ }

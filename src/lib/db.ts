@@ -171,6 +171,20 @@ export function getDb(): Database.Database {
       CREATE INDEX IF NOT EXISTS idx_chat_order ON chat_messages(order_id, created_at);
       CREATE INDEX IF NOT EXISTS idx_addons_product ON product_addons(product_id, is_active);
       CREATE INDEX IF NOT EXISTS idx_order_item_addons ON order_item_addons(order_item_id);
+
+      CREATE TABLE IF NOT EXISTS product_ingredients (
+        id TEXT PRIMARY KEY,
+        product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        amount REAL NOT NULL DEFAULT 0,
+        unit TEXT NOT NULL DEFAULT 'gr',
+        bulk_price INTEGER NOT NULL DEFAULT 0,
+        bulk_amount REAL NOT NULL DEFAULT 0,
+        used_amount REAL NOT NULL DEFAULT 0,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_product_ingredients ON product_ingredients(product_id);
     `);
 
     // Migration: add columns to existing tables if they don't exist
@@ -191,6 +205,8 @@ export function getDb(): Database.Database {
     try { db.exec("ALTER TABLE order_items ADD COLUMN original_price INTEGER NOT NULL DEFAULT 0"); } catch { /* already exists */ }
     // Voucher code snapshot on orders (denormalized for display)
     try { db.exec("ALTER TABLE orders ADD COLUMN voucher_code TEXT"); } catch { /* already exists */ }
+    // HPP snapshot on order items
+    try { db.exec("ALTER TABLE order_items ADD COLUMN hpp INTEGER NOT NULL DEFAULT 0"); } catch { /* already exists */ }
 
     seedDefaultProducts();
     seedDefaultStoreSettings();
@@ -240,6 +256,7 @@ export interface OrderItemRow {
   product_name: string;
   price: number;
   original_price: number;
+  hpp: number;
   quantity: number;
   notes: string | null;
 }
@@ -256,8 +273,8 @@ export function createOrder(
   `);
 
   const insertItem = db.prepare(`
-    INSERT INTO order_items (order_id, product_id, product_name, price, original_price, quantity, notes)
-    VALUES (@order_id, @product_id, @product_name, @price, @original_price, @quantity, @notes)
+    INSERT INTO order_items (order_id, product_id, product_name, price, original_price, hpp, quantity, notes)
+    VALUES (@order_id, @product_id, @product_name, @price, @original_price, @hpp, @quantity, @notes)
   `);
 
   const transaction = db.transaction(() => {
@@ -752,9 +769,10 @@ export function getRevenueStats(from?: string, to?: string): {
     FROM orders o WHERE ${where}
   `).get(...params) as { grossRevenue: number; orderCount: number };
 
-  // Total HPP = sum of (item qty * product hpp) for delivered orders
+  // Total HPP = sum of (item qty * snapshotted hpp) for delivered orders
+  // Uses order_items.hpp (snapshotted at order time), falls back to products.hpp for old orders
   const hppResult = db.prepare(`
-    SELECT COALESCE(SUM(oi.quantity * COALESCE(p.hpp, 0)), 0) as totalHpp
+    SELECT COALESCE(SUM(oi.quantity * CASE WHEN oi.hpp > 0 THEN oi.hpp ELSE COALESCE(p.hpp, 0) END), 0) as totalHpp
     FROM orders o
     JOIN order_items oi ON oi.order_id = o.id
     LEFT JOIN products p ON p.id = oi.product_id
@@ -1414,6 +1432,84 @@ export function getOrderItemAddons(orderItemIds: number[]): OrderItemAddonRow[] 
   return db
     .prepare(`SELECT * FROM order_item_addons WHERE order_item_id IN (${placeholders})`)
     .all(...orderItemIds) as OrderItemAddonRow[];
+}
+
+// ─── Product Ingredients (HPP Calculator) ────────────────────────────
+
+export interface ProductIngredientRow {
+  id: string;
+  product_id: string;
+  name: string;
+  amount: number;
+  unit: string;
+  bulk_price: number;
+  bulk_amount: number;
+  used_amount: number;
+  sort_order: number;
+  created_at: string;
+}
+
+export function getProductIngredients(productId: string): ProductIngredientRow[] {
+  const db = getDb();
+  return db.prepare("SELECT * FROM product_ingredients WHERE product_id = ? ORDER BY sort_order ASC, created_at ASC")
+    .all(productId) as ProductIngredientRow[];
+}
+
+export function createProductIngredient(data: {
+  id: string;
+  product_id: string;
+  name: string;
+  amount: number;
+  unit: string;
+  bulk_price: number;
+  bulk_amount: number;
+  used_amount: number;
+}): ProductIngredientRow {
+  const db = getDb();
+  db.prepare(
+    `INSERT INTO product_ingredients (id, product_id, name, amount, unit, bulk_price, bulk_amount, used_amount)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(data.id, data.product_id, data.name, data.amount, data.unit, data.bulk_price, data.bulk_amount, data.used_amount);
+  return db.prepare("SELECT * FROM product_ingredients WHERE id = ?").get(data.id) as ProductIngredientRow;
+}
+
+export function updateProductIngredient(
+  id: string,
+  fields: Partial<Pick<ProductIngredientRow, "name" | "amount" | "unit" | "bulk_price" | "bulk_amount" | "used_amount" | "sort_order">>
+): ProductIngredientRow | null {
+  const db = getDb();
+  const sets: string[] = [];
+  const params: unknown[] = [];
+  for (const [key, val] of Object.entries(fields)) {
+    if (val !== undefined) { sets.push(`${key} = ?`); params.push(val); }
+  }
+  if (sets.length === 0) return db.prepare("SELECT * FROM product_ingredients WHERE id = ?").get(id) as ProductIngredientRow | null;
+  params.push(id);
+  db.prepare(`UPDATE product_ingredients SET ${sets.join(", ")} WHERE id = ?`).run(...params);
+  return db.prepare("SELECT * FROM product_ingredients WHERE id = ?").get(id) as ProductIngredientRow | null;
+}
+
+export function deleteProductIngredient(id: string): void {
+  const db = getDb();
+  db.prepare("DELETE FROM product_ingredients WHERE id = ?").run(id);
+}
+
+/** Calculate total HPP from ingredients for a product */
+export function calculateProductHpp(productId: string): number {
+  const ingredients = getProductIngredients(productId);
+  return Math.round(ingredients.reduce((total, ing) => {
+    if (ing.bulk_amount <= 0) return total;
+    const pricePerUnit = ing.bulk_price / ing.bulk_amount;
+    return total + pricePerUnit * ing.used_amount;
+  }, 0));
+}
+
+/** Recalculate and save HPP for a product based on its ingredients */
+export function syncProductHpp(productId: string): number {
+  const hpp = calculateProductHpp(productId);
+  const db = getDb();
+  db.prepare("UPDATE products SET hpp = ? WHERE id = ?").run(hpp, productId);
+  return hpp;
 }
 
 // ─── Partners ────────────────────────────────────────────────────────
